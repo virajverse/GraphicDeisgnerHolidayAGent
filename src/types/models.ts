@@ -22,6 +22,8 @@ export interface BriefingRecommendation {
 }
 
 export interface IdeationResult {
+  conversational_intro?: string;
+  conversational_outro?: string;
   ideas: CreativeIdea[];
   recommendation: BriefingRecommendation;
 }

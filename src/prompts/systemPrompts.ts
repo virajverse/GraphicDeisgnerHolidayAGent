@@ -179,6 +179,8 @@ FEW-SHOT GOLD STANDARD EXAMPLE:
 
 OUTPUT SCHEMA (STRICT JSON ONLY):
 {
+  "conversational_intro": "A natural, warm, enthusiastic 1-2 sentence peer-to-peer opening in friendly Hinglish/English like an Executive Creative Director talking to a designer colleague over coffee (e.g. 'Arre waah! Is occasion ke liye maine fresh visual trends aur audience mood analyze karke 6 solid design angles ready kiye hain.')",
+  "conversational_outro": "A friendly, supportive sign-off giving quick actionable advice (e.g. 'Mera vote Idea #01 Carousel ya #05 Poll par hai — social feeds par scroll-stop guaranteed hai!')",
   "ideas": [
     {
       "category": "Educational | Emotional | Brand-focused | Social-awareness | Interactive | Experimental",

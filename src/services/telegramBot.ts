@@ -165,7 +165,11 @@ export function formatTelegramAlertMessage(
 ): string {
   const { ideas, recommendation } = ideation;
 
-  let msg = `✨ *CREATIVE OPPORTUNITY BRIEFING*\n\n`;
+  let msg = `✨ *CREATIVE RADAR BRIEFING*\n\n`;
+  if (ideation.conversational_intro) {
+    msg += `💬 _"${ideation.conversational_intro}"_\n\n`;
+  }
+
   msg += `📅 *Occasion:* ${event.name} (${event.date})\n\n`;
 
   msg += `🌐 *WHAT'S HAPPENING IN THE REAL WORLD:*\n`;
@@ -188,6 +192,10 @@ export function formatTelegramAlertMessage(
   msg += `⭐ *TOP STRATEGIC RECOMMENDATION:*\n`;
   const recNums = recommendation.recommended_ids ? recommendation.recommended_ids.map(i => `#0${i}`).join(' & ') : '#01 & #04';
   msg += `${recNums} — ${recommendation.avoid_note || 'Strongest engagement potential.'}\n\n`;
+
+  if (ideation.conversational_outro) {
+    msg += `💡 _"${ideation.conversational_outro}"_\n\n`;
+  }
 
   msg += `📱 *Target Platforms:* ${recommendation.recommended_platforms || 'Instagram Carousel + LinkedIn'}\n`;
   msg += `🎯 *Target Audience:* ${recommendation.target_audience || 'General / Modern Digital Audience'}\n`;

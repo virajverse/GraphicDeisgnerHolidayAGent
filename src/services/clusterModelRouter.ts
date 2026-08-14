@@ -1,25 +1,31 @@
 import 'dotenv/config';
-import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 import { ModelClusterType } from '../types/models.js';
 
-let openaiClientInstance: OpenAI | null = null;
+let nvidiaClientInstance: OpenAI | null = null;
 
-export function getOpenAIClient(): OpenAI {
-  if (!openaiClientInstance) {
+/**
+ * Initialize or return singleton NVIDIA NIM API Client (OpenAI-compatible)
+ */
+export function getNvidiaClient(): OpenAI {
+  if (!nvidiaClientInstance) {
     const apiKey = process.env.NVIDIA_API_KEY;
     if (!apiKey) {
-      console.warn('[ClusterModelRouter] ⚠️ NVIDIA_API_KEY is not defined in process.env!');
+      throw new Error('[ClusterModelRouter] ❌ CRITICAL: NVIDIA_API_KEY is not configured in process.env / environment variables!');
     }
-    openaiClientInstance = new OpenAI({
-      apiKey: apiKey || 'dummy-key',
+    nvidiaClientInstance = new OpenAI({
+      apiKey: apiKey,
       baseURL: 'https://integrate.api.nvidia.com/v1',
     });
   }
-  return openaiClientInstance;
+  return nvidiaClientInstance;
 }
 
+// Backward-compatible alias
+export const getOpenAIClient = getNvidiaClient;
+
 /**
- * 27-Model Resilient Functional Pools
+ * Functional Model Pools (Categorized by Cognitive Capability)
  */
 export const MODEL_CLUSTERS = {
   FRONT_DISPATCHER: [
@@ -65,7 +71,7 @@ export const MODEL_CLUSTERS = {
     'nvidia/nvidia-nemotron-nano-9b-v2',
     'nvidia/ising-calibration-1.5-31b'
   ]
-};
+} as const;
 
 export interface ClusterQueryOptions {
   temperature?: number;
@@ -79,15 +85,27 @@ export interface ClusterQueryOptions {
  * Execute resilient cascading inference across specialized model pools
  */
 export async function executeClusterQuery(
-  clusterPool: string[] | ModelClusterType,
+  clusterPool: readonly string[] | string[] | ModelClusterType | keyof typeof MODEL_CLUSTERS,
   systemPrompt: string,
   userPrompt: string,
   options: ClusterQueryOptions = {}
 ): Promise<{ text: string; modelUsed: string; poolAttempts: number; durationMs: number }> {
-  const models = Array.isArray(clusterPool) ? clusterPool : MODEL_CLUSTERS[clusterPool] || MODEL_CLUSTERS.DEEP_STRATEGY;
-  const client = getOpenAIClient();
-  const startTime = Date.now();
+  let models: readonly string[];
 
+  if (Array.isArray(clusterPool)) {
+    models = clusterPool;
+  } else if (typeof clusterPool === 'string' && clusterPool in MODEL_CLUSTERS) {
+    models = MODEL_CLUSTERS[clusterPool as keyof typeof MODEL_CLUSTERS];
+  } else {
+    throw new Error(`[ClusterRouter] ❌ Unknown model cluster pool specified: "${String(clusterPool)}". Valid pools: ${Object.keys(MODEL_CLUSTERS).join(', ')}`);
+  }
+
+  if (models.length === 0) {
+    throw new Error(`[ClusterRouter] ❌ Cluster pool "${String(clusterPool)}" contains 0 models.`);
+  }
+
+  const client = getNvidiaClient();
+  const startTime = Date.now();
   let lastError: Error | null = null;
 
   for (let i = 0; i < models.length; i++) {
@@ -95,19 +113,33 @@ export async function executeClusterQuery(
     const attemptStart = Date.now();
 
     try {
-      const response = await client.chat.completions.create({
+      const requestPayload: any = {
         model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: options.temperature !== undefined ? options.temperature : 0.6,
-        max_tokens: options.max_tokens || 2048,
-        top_p: options.top_p !== undefined ? options.top_p : 0.9,
-        response_format: options.response_format
-      });
+        temperature: options.temperature ?? 0.6,
+        max_tokens: options.max_tokens ?? 2048,
+        top_p: options.top_p ?? 0.9,
+      };
 
-      const text = response.choices[0]?.message?.content || '';
+      // Only attach response_format if explicitly defined
+      if (options.response_format) {
+        requestPayload.response_format = options.response_format;
+      }
+
+      // Execute completion with optional timeout support
+      const requestOptions = options.timeout ? { timeout: options.timeout } : undefined;
+      const response = await client.chat.completions.create(requestPayload, requestOptions);
+
+      const text = response.choices[0]?.message?.content?.trim();
+
+      // Guard against empty model responses
+      if (!text) {
+        throw new Error(`Model "${model}" returned an empty response string.`);
+      }
+
       const durationMs = Date.now() - startTime;
       const attemptDuration = Date.now() - attemptStart;
 
@@ -118,10 +150,11 @@ export async function executeClusterQuery(
         poolAttempts: i + 1,
         durationMs
       };
-    } catch (err: any) {
-      lastError = err;
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      lastError = err instanceof Error ? err : new Error(errorMessage);
       const attemptDuration = Date.now() - attemptStart;
-      console.warn(`[ClusterRouter] ⚠️ Model [${i + 1}/${models.length}] "${model}" failed in ${attemptDuration}ms: ${err.message}. Cascading to next model...`);
+      console.warn(`[ClusterRouter] ⚠️ Model [${i + 1}/${models.length}] "${model}" failed in ${attemptDuration}ms: ${errorMessage}. Cascading to next fallback...`);
     }
   }
 

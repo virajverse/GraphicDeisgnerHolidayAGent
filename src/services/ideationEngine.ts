@@ -57,6 +57,8 @@ Ensure strictly ONE idea for Educational, Emotional, Brand-focused, Social-aware
 
     if (parsed.ideas && Array.isArray(parsed.ideas) && parsed.ideas.length >= 6) {
       return {
+        conversational_intro: parsed.conversational_intro || `Arre! Is occasion ke liye maine fresh visual trends aur marketing angles scan karke 6 killer concepts design kiye hain.`,
+        conversational_outro: parsed.conversational_outro || `Mera recommendation: Idea #01 Carousel ya #04 Checklist sabse zyada bookmarks layega!`,
         ideas: parsed.ideas.slice(0, 6),
         recommendation: parsed.recommendation || {
           recommended_ids: [1, 4],
