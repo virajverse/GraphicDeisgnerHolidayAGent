@@ -44,8 +44,8 @@ function checkUserCooldown(chatId: string | number): { allowed: boolean; remaini
 // Keyboards
 export const DESIGNER_KEYBOARD = {
   keyboard: [
-    [{ text: '⚡ Today\'s Focus' }, { text: '📅 Upcoming Dates' }],
-    [{ text: '💡 Generate Ideas' }, { text: '💼 Client Profiles' }],
+    [{ text: '⚡ Auto Radar Brief' }, { text: '📅 Upcoming Dates' }],
+    [{ text: '💡 Custom Prompt' }, { text: '💼 Client Profiles' }],
     [{ text: '👤 My Activity' }, { text: '📖 Designer Guide' }]
   ],
   resize_keyboard: true,
@@ -647,9 +647,22 @@ export async function handleTelegramWebhookUpdate(update: any) {
       });
     }
 
-    if (text === '/today' || text === '⚡ Today\'s Focus') {
-      const response = await handleTodayCommand();
-      return await sendSafeTelegramMessage(chatId, response);
+    if (text === '/today' || text === '/autobrief' || text === '⚡ Auto Radar Brief' || text === '⚡ Today\'s Focus') {
+      const topEvt: EventRecord = db.prepare('SELECT * FROM events ORDER BY importance DESC LIMIT 1').get() || {
+        id: 'evt_default',
+        name: 'Independence Day India',
+        date: '08-15',
+        category: 'NATIONAL',
+        importance: 95
+      };
+      await sendSafeTelegramMessage(chatId, `🎯 *[AHEAD-OF-TIME AUTO RADAR]*\n\nHey ${auth.user?.name || 'Designer'}! Next 2-3 dino me *${topEvt.name}* aa raha hai. Apne clients ke liye yeh design bana lo!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`);
+      return await processAgentDesignRequest(chatId, topEvt.name, auth.user);
+    }
+
+    if (text === '💡 Custom Prompt' || text === '💡 Generate Ideas') {
+      return await sendSafeTelegramMessage(chatId, `💡 *Aapko kiske liye design ideas chahiye?*\n\nNiche se koi upcoming event choose karein ya chat me apna custom prompt likhein:`, {
+        reply_markup: getUpcomingInlineKeyboard()
+      });
     }
 
     if (text === '/clients' || text === '💼 Client Profiles') {
