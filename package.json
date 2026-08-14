@@ -1,0 +1,33 @@
+{
+  "name": "taliyo-creative-intelligence",
+  "version": "1.0.0",
+  "description": "Taliyo Creative Intelligence AI Agent — Real-world Context & 5-6 Creative Ideas Generator for Graphic Designers",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/db/seedEvents.js",
+    "test": "node test/test-run.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.22.0",
+    "@libsql/client": "^0.17.4",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "node-telegram-bot-api": "^0.66.0",
+    "openai": "^7.4.0"
+  },
+  "keywords": [
+    "creative-intelligence",
+    "ai-agent",
+    "graphic-designer",
+    "telegram-bot",
+    "real-world-context"
+  ],
+  "author": "Taliyo Technologies",
+  "license": "MIT"
+}
