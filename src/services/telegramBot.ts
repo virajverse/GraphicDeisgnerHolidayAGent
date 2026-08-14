@@ -793,14 +793,63 @@ export async function handleTelegramWebhookUpdate(update: any) {
         return await sendSafeTelegramMessage(chatId, `👑 User \`${targetId}\` promoted to Admin.`);
       }
 
-      if (text.startsWith('/broadcast')) {
-        const broadcastMsg = text.replace('/broadcast', '').trim();
-        if (!broadcastMsg) return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/broadcast Your announcement text here\``);
+      if (text.startsWith('/broadcastphoto')) {
+        const parts = text.replace('/broadcastphoto', '').trim().split('|').map(s => s.trim());
+        if (parts.length < 2) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/broadcastphoto PhotoURL | Caption with [Title](Link) | ButtonText | ButtonURL\`\n\n*(Example: \`/broadcastphoto https://example.com/banner.jpg | 🔥 *New Video Alert!* \n\nCheck out [VirajVerse](https://youtube.com/@VirajVerse016) | ▶️ Watch Video | https://youtube.com/@VirajVerse016\`)*`);
+        }
+        const [photoUrl, caption, btnText, btnUrl] = parts;
+        const replyMarkup = (btnText && btnUrl) ? {
+          inline_keyboard: [[{ text: btnText, url: btnUrl }]]
+        } : undefined;
+
+        const users: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1').all();
+        let sentCount = 0;
+        for (const u of users) {
+          if (u.telegram_chat_id && u.telegram_chat_id !== chatId.toString() && botInstance) {
+            try {
+              await botInstance.sendPhoto(u.telegram_chat_id, photoUrl, {
+                caption: `📢 *OFFICIAL ANNOUNCEMENT*\n\n${caption}`,
+                parse_mode: 'Markdown',
+                reply_markup: replyMarkup
+              });
+              sentCount++;
+            } catch (err: any) {
+              console.warn(`[Broadcast Error]: ${err.message}`);
+            }
+          }
+        }
+        return await sendSafeTelegramMessage(chatId, `📢 *PHOTO BROADCAST COMPLETE:* Sent with rich media and buttons to ${sentCount} active designers.`);
+      }
+
+      if (text.startsWith('/broadcastlink')) {
+        const parts = text.replace('/broadcastlink', '').trim().split('|').map(s => s.trim());
+        if (parts.length < 4) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/broadcastlink Title | Message Body | Button Title | Button URL\`\n\n*(Example: \`/broadcastlink 🚀 Big Update | Check out our new tutorials! | 📸 Follow Instagram | https://instagram.com/fearless.devx/\`)*`);
+        }
+        const [title, body, btnText, btnUrl] = parts;
+        const replyMarkup = {
+          inline_keyboard: [[{ text: btnText, url: btnUrl }]]
+        };
         const users: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1').all();
         let sentCount = 0;
         for (const u of users) {
           if (u.telegram_chat_id && u.telegram_chat_id !== chatId.toString()) {
-            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *OFFICIAL ADMIN ANNOUNCEMENT*\n\n${broadcastMsg}`).catch(() => {});
+            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *${title}*\n\n${body}`, { reply_markup: replyMarkup }).catch(() => {});
+            sentCount++;
+          }
+        }
+        return await sendSafeTelegramMessage(chatId, `📢 *LINK BROADCAST COMPLETE:* Sent with interactive button to ${sentCount} active designers.`);
+      }
+
+      if (text.startsWith('/broadcast')) {
+        const broadcastMsg = text.replace('/broadcast', '').trim();
+        if (!broadcastMsg) return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/broadcast Your announcement text with [Title](https://link.com)\``);
+        const users: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1').all();
+        let sentCount = 0;
+        for (const u of users) {
+          if (u.telegram_chat_id && u.telegram_chat_id !== chatId.toString()) {
+            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *OFFICIAL ANNOUNCEMENT*\n\n${broadcastMsg}`).catch(() => {});
             sentCount++;
           }
         }
@@ -819,8 +868,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
           `• \`/approve CHAT_ID\` — Approve pending user\n` +
           `• \`/revoke CHAT_ID\` — Revoke user access\n` +
           `• \`/makeadmin CHAT_ID\` — Promote to Admin\n\n` +
-          `📢 *BROADCAST ALERT:*\n` +
-          `• \`/broadcast Your announcement message\``;
+          `📢 *RICH MEDIA BROADCASTS:*\n` +
+          `• \`/broadcast Text with [Title](https://url)\`\n` +
+          `• \`/broadcastphoto PhotoURL | Caption | ButtonTitle | URL\`\n` +
+          `• \`/broadcastlink Title | Message | ButtonTitle | URL\``;
         return await sendSafeTelegramMessage(chatId, editGuide);
       }
 
