@@ -260,7 +260,7 @@ app.post(['/api/telegram/webhook', '/telegram/webhook'], async (req, res) => {
 });
 
 // Listen locally only if not running inside Vercel Serverless environment
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`=======================================================`);
     console.log(`🚀 Taliyo Creative Intelligence AI Agent Server Running`);

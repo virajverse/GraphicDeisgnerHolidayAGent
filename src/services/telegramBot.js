@@ -520,8 +520,42 @@ export async function handleTodayCommand() {
                    db.prepare('SELECT * FROM events LIMIT 1').get();
   
   if (!todayEvt) return "No major event scheduled for today.";
+  const res = await handleOnDemandIdeas(todayEvt.name);
+  return res.formattedMessage;
+}
 
-  return await handleOnDemandIdeas(todayEvt.name).then(res => res.formattedMessage);
+export async function handleOnDemandIdeas(eventName, clientId = null, userId = 'default_user') {
+  const event = db.prepare('SELECT * FROM events WHERE name LIKE ? LIMIT 1').get(`%${eventName}%`) || {
+    id: `evt_custom_${Date.now()}`,
+    name: eventName,
+    description: `Special creative opportunity for ${eventName}`,
+    date: 'Upcoming',
+    country: 'India',
+    category: 'BUSINESS',
+    importance: 85,
+    source: 'User Query'
+  };
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) || db.prepare("SELECT * FROM users WHERE id = 'default_user'").get();
+  const client = clientId ? db.prepare('SELECT * FROM clients WHERE id = ?').get(clientId) : db.prepare('SELECT * FROM clients WHERE user_id = ? OR user_id = "default_user" LIMIT 1').get(userId);
+
+  const context = await fetchRealWorldContext(event);
+  const ideation = await generateCreativeIdeas({ event, context, userProfile: user, clientProfile: client });
+
+  const alertData = {
+    eventId: event.id,
+    relevanceScore: event.importance || 85
+  };
+
+  const formattedMessage = formatTelegramAlertMessage(event, alertData, context, ideation);
+
+  return {
+    eventId: event.id,
+    event,
+    context,
+    ideation,
+    formattedMessage
+  };
 }
 
 export async function handleTelegramWebhookUpdate(update) {
