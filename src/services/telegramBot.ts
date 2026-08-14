@@ -431,9 +431,13 @@ export async function handleTelegramWebhookUpdate(update: any) {
     if (data === 'gate_register') {
       await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => {});
       onboardingTracker.set(chatId.toString(), { step: 'WAITING_DETAILS' });
-      const regStep1 = `📝 *FREE DESIGNER REGISTRATION (STEP 1/2)*\n\n` +
-        `Aapka swagat hai! Please apna **Name, Instagram Handle aur YouTube Channel Name** chat me type karke bhejiye:\n\n` +
-        `*(Format Example: Rahul Sharma | @rahul_graphics | @RahulDesignsYT)*`;
+      const regStep1 = `🚀 *FREE DESIGNER REGISTRATION (STEP 1/2)*\n\n` +
+        `Taliyo Creative Intelligence AI Agent ka free access paane ke liye pehle hamare official channels ko **Follow & Subscribe** karein:\n\n` +
+        `1️⃣ *Instagram:* https://www.instagram.com/fearless.devx/\n` +
+        `2️⃣ *YouTube Channel:* https://www.youtube.com/@VirajVerse016\n\n` +
+        `👇 *Follow & Subscribe karne ke baad, chat me apni details bhejiye:*\n` +
+        `\`Full Name | Instagram Handle | YouTube Channel Name\`\n\n` +
+        `*(Example: Rahul Sharma | @rahul_graphics | @RahulDesignsYT)*`;
       return await sendSafeTelegramMessage(chatId, regStep1);
     }
 
@@ -619,11 +623,12 @@ export async function handleTelegramWebhookUpdate(update: any) {
         profileBadge = `\n🔍 *Instagram Profile Detected:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (${instaProfile.followerCount.toLocaleString()} Followers)\n`;
       }
 
-      const step2Msg = `🚀 *STEP 2/2: FAST-TRACK VERIFICATION & ACCESS!*${profileBadge}\n` +
-        `Apne designer account ko **Fast-Track Verify** karwane ke liye hamare official channels ko follow/subscribe karein:\n\n` +
-        `1️⃣ *Instagram:* https://www.instagram.com/fearless.devx/\n` +
-        `2️⃣ *YouTube Channel:* https://www.youtube.com/@VirajVerse016\n\n` +
-        `📸 *Follow / Subscribe karne ke baad bas 1 SCREENSHOT ISI BOT MEIN bhej dijiye!* Admin review karke turant aapka access activate karenge!`;
+      const step2Msg = `📸 *STEP 2/2: UPLOAD PROOF SCREENSHOT*${profileBadge}\n\n` +
+        `✅ *Details Recorded:*\n` +
+        `• Name: *${name}*\n` +
+        `• Instagram: *${targetHandle}*\n` +
+        `• YouTube Channel: *${ytChannel}*\n\n` +
+        `📸 *Ab bas Follow & Subscribe ka 1 SCREENSHOT ISI BOT MEIN photo ki tarah bhej dijiye!* Admin review karke turant aapka access activate karenge!`;
       return await sendSafeTelegramMessage(chatId, step2Msg);
     }
 
