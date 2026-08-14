@@ -1320,6 +1320,96 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
       const parsed = JSON.parse(clean);
 
+      // Autonomous Slash-Free Command Execution
+      if (parsed.action === 'EXECUTE_COMMAND' && parsed.commandName) {
+        const cmd = parsed.commandName;
+        if (cmd === 'SHOW_CALENDAR') {
+          const calText = handleFullCalendarCommand('ALL');
+          return await sendSafeTelegramMessage(chatId, calText, { reply_markup: getFullCalendarInlineKeyboard() });
+        }
+        if (cmd === 'SHOW_CLIENTS') {
+          const clients: ClientRecord[] = db.prepare('SELECT * FROM clients WHERE user_id = ? OR user_id = "default_user"').all(auth.user?.id || 'default_user');
+          let clientText = `💼 *Your Private Client Brand Profiles*\n\n`;
+          clients.forEach(c => {
+            clientText += `• *${c.name}* (${c.industry})\n  Tone: _${c.brand_tone}_\n  Style: ${c.creative_style}\n\n`;
+          });
+          return await sendSafeTelegramMessage(chatId, clientText);
+        }
+        if (cmd === 'AUTO_RADAR_BRIEF') {
+          const topEvt: EventRecord = db.prepare('SELECT * FROM events ORDER BY importance DESC LIMIT 1').get() || {
+            id: 'evt_default',
+            name: 'Independence Day India',
+            date: '08-15',
+            category: 'NATIONAL',
+            importance: 95
+          };
+          const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
+          const alertNotice = isEnglish
+            ? `🎯 *[AHEAD-OF-TIME RADAR BRIEF]*\n\nHey ${auth.user?.name || 'Designer'}! Upcoming in next 2-3 days: *${topEvt.name}*. Get your client campaigns ready!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`
+            : `🎯 *[AHEAD-OF-TIME AUTO RADAR]*\n\nHey ${auth.user?.name || 'Designer'}! Next 2-3 dino me *${topEvt.name}* aa raha hai. Apne clients ke liye yeh design bana lo!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`;
+          await sendSafeTelegramMessage(chatId, alertNotice);
+          return await processAgentDesignRequest(chatId, topEvt.name, auth.user);
+        }
+        if (cmd === 'SHOW_ACTIVITY') {
+          const userClients = db.prepare('SELECT COUNT(*) as count FROM clients WHERE user_id = ?').get(auth.user?.id || 'default_user')?.count || 0;
+          const userSaved = db.prepare('SELECT COUNT(*) as count FROM feedback WHERE user_id = ? AND rating = "SAVED"').get(auth.user?.id || 'default_user')?.count || 0;
+          const activityText = `👤 *Hey ${auth.user?.name || 'Designer'}! Here is YOUR Private Work Summary:*\n\n` +
+            `• *Preferred Language:* ${auth.user?.language || 'HINGLISH'}\n` +
+            `• *Your Private Client Profiles:* ${userClients} Active Brands\n` +
+            `• *Your Saved Briefings:* ${userSaved} Concepts Bookmarked\n` +
+            `• *Privacy Isolation:* 100% Private\n\n` +
+            `💬 *Ask me any design prompt to generate your next creative briefing!*`;
+          return await sendSafeTelegramMessage(chatId, activityText);
+        }
+        if (cmd === 'SWITCH_LANGUAGE') {
+          const currentLang = auth.user?.language || 'HINGLISH';
+          const langPrompt = `🌐 *LANGUAGE SETTINGS (ENGLISH / HINGLISH)*\n\n` +
+            `Current Setting: *${currentLang === 'ENGLISH' ? '🇬🇧 English (Global)' : '🇮🇳 Hinglish (Desi / India)'}*\n\n` +
+            `Apni pasandida bhasha chunein / Choose your preferred briefing language:`;
+          return await sendSafeTelegramMessage(chatId, langPrompt, { reply_markup: LANGUAGE_INLINE_KEYBOARD });
+        }
+        if (cmd === 'COPILOT_GUIDE') {
+          const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
+          const copilotMsg = isEnglish
+            ? `🎨 *TALIYO ART DIRECTOR CO-PILOT ACTIVE!*\n\nWorking on an active design right now? Get precision creative feedback:\n\n• *Exact Hex Palettes:* "Suggest luxury real estate palette"\n• *Font Pairings:* "Display + body font pairing for SaaS"\n• *Headline Copy:* "Make this fitness headline punchy"\n• *Figma Specs:* "What margins for 1080x1350 carousel"\n\n👇 *Type your design query directly into chat!*`
+            : `🎨 *TALIYO ART DIRECTOR CO-PILOT ACTIVE!*\n\nAap abhi jo design bana rahe hain, usme direct precision help lein:\n\n• *Exact Hex Palettes:* "Luxury real estate poster ke liye color palette batao"\n• *Font Pairings:* "SaaS carousel ke liye best font pairing"\n• *Headline Copy:* "Is headline ko luxurious aur punchy banao"\n• *Figma/Canva Specs:* "1080x1350 carousel ke liye margin aur padding"\n\n👇 *Koi bhi query direct chat me likh kar bhejiye!*`;
+          return await sendSafeTelegramMessage(chatId, copilotMsg);
+        }
+        if (cmd === 'SHOW_GUIDE') {
+          const guideMsg = `📖 *TALIYO CREATIVE STUDIO GUIDE & SUPPORT*\n\n` +
+            `1️⃣ *⚡ Auto Radar Brief:* 1-tap me upcoming event ki 6-concept strategy.\n` +
+            `2️⃣ *🗓️ Full Calendar:* Poore saal ke festivals aur marketing dates.\n` +
+            `3️⃣ *🎨 Art Director Co-Pilot:* Active design ke liye exact colors, fonts aur copy.\n` +
+            `4️⃣ *💼 Client Profiles:* Private client brand guidelines aur styling.\n` +
+            `5️⃣ *🌐 Language:* 1-tap me English aur Hinglish switch karein.\n\n` +
+            `📩 *Priority Support:* Contact *@virajverse* on Telegram.`;
+          return await sendSafeTelegramMessage(chatId, guideMsg);
+        }
+        if (cmd === 'ADMIN_PANEL' && auth.isAdmin) {
+          const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get()?.count || 1;
+          const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;
+          const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get()?.count || 0;
+          const adminPanelMsg = `👑 *TALIYO SUPER ADMIN MASTER CONTROL SUITE*\n\n` +
+            `• *Approved Designers:* ${usersCount} Active Accounts\n` +
+            `• *Total Briefings Dispatched:* ${alertsCount} Briefs\n` +
+            `• *Generated Concepts:* ${ideasCount} Ideas\n` +
+            `• *Cluster Engine:* 27-Model Resilient Cascade Active\n` +
+            `• *Cloud DB:* Turso Cloud SQLite (AWS Mumbai)`;
+          return await sendSafeTelegramMessage(chatId, adminPanelMsg, { reply_markup: ADMIN_MASTER_KEYBOARD });
+        }
+        if (cmd === 'PENDING_APPROVALS' && auth.isAdmin) {
+          const pendingUsers: UserRecord[] = db.prepare('SELECT * FROM users WHERE verification_status = "PENDING" ORDER BY registered_at DESC').all();
+          if (pendingUsers.length === 0) {
+            return await sendSafeTelegramMessage(chatId, `🔔 *PENDING VERIFICATIONS*\n\nAbhi koi pending verification request nahi hai. Sabhi designers approved hain!`);
+          }
+          let pendingList = `🔔 *PENDING DESIGNER VERIFICATIONS (${pendingUsers.length})*\n\n`;
+          pendingUsers.forEach((u, i) => {
+            pendingList += `${i + 1}. *${u.name}* (@${u.username || 'n/a'})\n   • Chat ID: \`${u.telegram_chat_id}\`\n\n`;
+          });
+          return await sendSafeTelegramMessage(chatId, pendingList);
+        }
+      }
+
       if (parsed.action === 'REPLY_DIRECTLY') {
         return await sendSafeTelegramMessage(chatId, parsed.message);
       }
