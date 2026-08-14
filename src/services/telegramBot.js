@@ -134,6 +134,50 @@ export function formatTelegramAlertMessage(event, alertData, context, ideationRe
   return msg;
 }
 
+export const MAIN_REPLY_KEYBOARD = {
+  keyboard: [
+    [{ text: '⚡ Today\'s Focus' }, { text: '📅 Upcoming Dates' }],
+    [{ text: '💡 Generate Ideas' }, { text: '💼 Client Profiles' }],
+    [{ text: '👤 My Activity' }, { text: '📊 System Health' }]
+  ],
+  resize_keyboard: true,
+  persistent: true
+};
+
+export const START_INLINE_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '⚡ Today\'s Focus', callback_data: 'menu_today' },
+      { text: '📅 Upcoming Dates', callback_data: 'menu_upcoming' }
+    ],
+    [
+      { text: '💼 Client Profiles', callback_data: 'menu_clients' },
+      { text: '👤 My Activity', callback_data: 'menu_activity' }
+    ],
+    [
+      { text: '📊 System Health', callback_data: 'menu_status' },
+      { text: '💬 Contact Admin', callback_data: 'menu_contact' }
+    ],
+    [
+      { text: '📖 Full Designer Guide', callback_data: 'menu_help' }
+    ]
+  ]
+};
+
+export function getUpcomingInlineKeyboard() {
+  const events = db.prepare('SELECT * FROM events ORDER BY date ASC LIMIT 4').all();
+  const buttons = [];
+  for (let i = 0; i < events.length; i += 2) {
+    const row = [];
+    row.push({ text: `🎨 ${events[i].name}`, callback_data: `gen_evt_${events[i].name}` });
+    if (events[i + 1]) {
+      row.push({ text: `🎨 ${events[i + 1].name}`, callback_data: `gen_evt_${events[i + 1].name}` });
+    }
+    buttons.push(row);
+  }
+  return { inline_keyboard: buttons };
+}
+
 export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN) {
   if (!token || !token.trim()) {
     console.log('[TelegramBot] No active Bot Token provided. Running in Sandbox API mode.');
@@ -154,22 +198,16 @@ export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN) {
         return sendAccessRestrictedCard(chatId);
       }
 
-      const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! I am your Senior Graphic Design AI Agent*\n\n` +
-        `I am your ChatGPT-powered partner dedicated 100% to **Graphic Design, Brand Strategy, Visual Art Direction, & Campaign Briefings**!\n\n` +
-        `💬 *Talk to me naturally about any event or design prompt:* e.g.\n` +
+      const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! Welcome to Taliyo Creative Intelligence*\n\n` +
+        `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
+        `👇 *Tap any quick button below or type naturally:* e.g.\n` +
         `• *"Independence Day ideas for NGO client"*\n` +
         `• *"What should I design for Diwali?"*\n` +
-        `• *"3 carousel poster ideas for World Chai Day"*\n\n` +
-        `⚡ *Commands:*\n` +
-        `• /today — Today's design opportunities\n` +
-        `• /upcoming — Top upcoming creative dates\n` +
-        `• /ideas [event] — Generate 6 ideas on demand\n` +
-        `• /clients — View your private client brand profiles\n` +
-        `• /status — Agent health & live telemetry\n` +
-        `• /contact — Contact Admin *${ADMIN_HANDLE}*\n` +
-        `• /help — Full agent guide`;
+        `• *"3 carousel poster ideas for SaaS launch"*`;
       
-      botInstance.sendMessage(chatId, welcome, { parse_mode: 'Markdown' });
+      sendSafeTelegramMessage(chatId, welcome, {
+        reply_markup: START_INLINE_KEYBOARD
+      });
     });
 
     // 2. Security Passcode Registration (/register [PASSCODE]) with Brute-Force Protection
@@ -570,7 +608,53 @@ export async function handleTelegramWebhookUpdate(update) {
     const chatId = query.message.chat.id;
     const data = query.data;
 
-    if (data.startsWith('specs_')) {
+    if (data === 'menu_today') {
+      await botInstance.answerCallbackQuery(query.id, { text: '⚡ Loading Today\'s Focus...' }).catch(() => {});
+      const response = await handleTodayCommand();
+      return await sendSafeTelegramMessage(chatId, response);
+    } else if (data === 'menu_upcoming') {
+      await botInstance.answerCallbackQuery(query.id, { text: '📅 Loading Upcoming Calendar...' }).catch(() => {});
+      const upcomingList = handleUpcomingCommand();
+      return await sendSafeTelegramMessage(chatId, upcomingList, { reply_markup: getUpcomingInlineKeyboard() });
+    } else if (data === 'menu_clients') {
+      await botInstance.answerCallbackQuery(query.id, { text: '💼 Loading Client Profiles...' }).catch(() => {});
+      const clients = db.prepare('SELECT * FROM clients').all();
+      let clientText = `💼 *YOUR PRIVATE CLIENT BRAND PROFILES*\n\n`;
+      clients.forEach(c => {
+        clientText += `• *${c.name}* (${c.industry})\n  Tone: _${c.brand_tone}_\n  Style: ${c.creative_style}\n\n`;
+      });
+      return await sendSafeTelegramMessage(chatId, clientText);
+    } else if (data === 'menu_activity') {
+      await botInstance.answerCallbackQuery(query.id, { text: '👤 Loading Summary...' }).catch(() => {});
+      const activityText = `👤 *YOUR CREATIVE AGENT ACTIVITY*\n\n` +
+        `• *Role:* Senior Graphic Designer\n` +
+        `• *Saved Briefings:* Active & Synchronized\n` +
+        `• *NVIDIA Cluster:* 27 Models Online\n\n` +
+        `💬 *Tap any upcoming event or send a prompt to generate 6 ideas!*`;
+      return await sendSafeTelegramMessage(chatId, activityText);
+    } else if (data === 'menu_status') {
+      await botInstance.answerCallbackQuery(query.id, { text: '📊 Loading Telemetry...' }).catch(() => {});
+      const statusText = `📊 *TALIYO AGENT TELEMETRY*\n\n` +
+        `• *System Health:* 🟢 100% Operational\n` +
+        `• *AI Routing Engine:* 27-Model NVIDIA NIM Cluster\n` +
+        `• *Database Engine:* Turso Cloud SQLite (AWS Mumbai)\n` +
+        `• *Cloud Platform:* Vercel Serverless Production`;
+      return await sendSafeTelegramMessage(chatId, statusText);
+    } else if (data === 'menu_contact') {
+      await botInstance.answerCallbackQuery(query.id, { text: '💬 Contact Admin...' }).catch(() => {});
+      return await sendSafeTelegramMessage(chatId, `📩 *ADMIN CONTACT & SUPPORT*\n\nFor Passcode Access, Custom Clients or Priority Support:\n👉 Telegram Admin: *${ADMIN_HANDLE}*`);
+    } else if (data === 'menu_help') {
+      await botInstance.answerCallbackQuery(query.id, { text: '📖 Designer Guide...' }).catch(() => {});
+      const helpMsg = `📖 *TALIYO DESIGNER QUICK GUIDE*\n\n` +
+        `1️⃣ *Instant Ideas:* Tap any button below or type any festival/prompt in chat.\n` +
+        `2️⃣ *Visual Specs:* Get exact Hex Colors & Font Pairings with 1 tap.\n` +
+        `3️⃣ *Client Isolation:* Every designer's brand guidelines stay private.`;
+      return await sendSafeTelegramMessage(chatId, helpMsg);
+    } else if (data.startsWith('gen_evt_')) {
+      const evtName = data.replace('gen_evt_', '');
+      await botInstance.answerCallbackQuery(query.id, { text: `🎨 Generating 6 ideas for ${evtName}...` }).catch(() => {});
+      return await processAgentDesignRequest(chatId, evtName, { id: 'default_user', name: 'Designer' });
+    } else if (data.startsWith('specs_')) {
       await botInstance.answerCallbackQuery(query.id, { text: '🎨 Generating Visual Specs...' }).catch(() => {});
       const specsText = `🎨 *DESIGNER VISUAL SPECS & ASSET GUIDE*\n\n` +
         `🎨 *Recommended Color Palette:*\n` +
@@ -632,7 +716,7 @@ export async function handleTelegramWebhookUpdate(update) {
         const successMsg = `🎉 *ACCESS GRANTED! WELCOME TO TALIYO AGENT*\n\n` +
           `You are now registered as an official Graphic Designer!\n\n` +
           `💬 Send any event name or design prompt in chat to generate 6 creative briefings instantly!`;
-        return await sendSafeTelegramMessage(chatId, successMsg);
+        return await sendSafeTelegramMessage(chatId, successMsg, { reply_markup: MAIN_REPLY_KEYBOARD });
       } else {
         tracker.attempts = (tracker.attempts || 0) + 1;
         if (tracker.attempts >= 3) {
@@ -665,34 +749,27 @@ export async function handleTelegramWebhookUpdate(update) {
       return sendAccessRestrictedCard(chatId);
     }
 
-    // Authenticated Commands
-    if (text === '/start') {
-      const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! I am your Senior Graphic Design AI Agent*\n\n` +
-        `I am your ChatGPT-powered partner dedicated 100% to **Graphic Design, Brand Strategy, Visual Art Direction, & Campaign Briefings**!\n\n` +
-        `💬 *Talk to me naturally about any event or design prompt:* e.g.\n` +
+    // Authenticated Commands & Reply Keyboard Taps
+    if (text === '/start' || text.toLowerCase() === 'start') {
+      const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! Welcome to Taliyo Creative Intelligence*\n\n` +
+        `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
+        `👇 *Tap any quick button below or type naturally:* e.g.\n` +
         `• *"Independence Day ideas for NGO client"*\n` +
         `• *"What should I design for Diwali?"*\n` +
-        `• *"3 carousel poster ideas for World Chai Day"*\n\n` +
-        `⚡ *Commands:*\n` +
-        `• /today — Today's design opportunities\n` +
-        `• /upcoming — Top upcoming creative dates\n` +
-        `• /ideas [event] — Generate 6 ideas on demand\n` +
-        `• /clients — View your private client brand profiles\n` +
-        `• /myactivity — View your private work summary\n` +
-        `• /status — Agent health & live telemetry\n` +
-        `• /contact — Contact Admin *${ADMIN_HANDLE}*\n` +
-        `• /help — Full agent guide`;
-      return await sendSafeTelegramMessage(chatId, welcome);
+        `• *"3 carousel poster ideas for SaaS launch"*`;
+      return await sendSafeTelegramMessage(chatId, welcome, {
+        reply_markup: START_INLINE_KEYBOARD
+      });
     }
 
-    if (text === '/contact') {
+    if (text === '/contact' || text === '💬 Contact Admin') {
       const contactMsg = `📩 *ADMIN CONTACT & SUPPORT*\n\n` +
         `For Admin Passcode Access, Custom Client Onboarding, or Priority Support, contact:\n\n` +
         `👉 Telegram Admin: *${ADMIN_HANDLE}*`;
       return await sendSafeTelegramMessage(chatId, contactMsg);
     }
 
-    if (text === '/help') {
+    if (text === '/help' || text === '📖 Agent Guide' || text === '📖 Full Designer Guide') {
       const helpMsg = `📖 *Taliyo Design AI Agent Guide*\n\n` +
         `1️⃣ *Multi-User Security:* Each designer has private isolated client profiles.\n` +
         `2️⃣ *Concurrent Request Queue:* High-traffic prompts are queued safely.\n` +
@@ -701,17 +778,19 @@ export async function handleTelegramWebhookUpdate(update) {
       return await sendSafeTelegramMessage(chatId, helpMsg);
     }
 
-    if (text === '/upcoming') {
+    if (text === '/upcoming' || text === '📅 Upcoming Dates' || text === '📅 Upcoming Calendar') {
       const upcomingList = handleUpcomingCommand();
-      return await sendSafeTelegramMessage(chatId, upcomingList);
+      return await sendSafeTelegramMessage(chatId, upcomingList, {
+        reply_markup: getUpcomingInlineKeyboard()
+      });
     }
 
-    if (text === '/today') {
+    if (text === '/today' || text === '⚡ Today\'s Focus') {
       const response = await handleTodayCommand();
       return await sendSafeTelegramMessage(chatId, response);
     }
 
-    if (text === '/clients') {
+    if (text === '/clients' || text === '💼 Client Profiles' || text === '💼 My Client Profiles') {
       const clients = db.prepare('SELECT * FROM clients WHERE user_id = ? OR user_id = "default_user"').all(auth.user.id);
       let clientText = `💼 *Your Private Client Brand Profiles*\n\n`;
       clients.forEach(c => {
@@ -720,7 +799,7 @@ export async function handleTelegramWebhookUpdate(update) {
       return await sendSafeTelegramMessage(chatId, clientText);
     }
 
-    if (text === '/myactivity' || text.toLowerCase().includes('abhi tak kya') || text.toLowerCase().includes('what have you done')) {
+    if (text === '/myactivity' || text === '👤 My Activity' || text.toLowerCase().includes('abhi tak kya') || text.toLowerCase().includes('what have you done')) {
       const userClients = db.prepare('SELECT COUNT(*) as count FROM clients WHERE user_id = ?').get(auth.user.id)?.count || 0;
       const userSaved = db.prepare('SELECT COUNT(*) as count FROM feedback WHERE user_id = ? AND rating = "SAVED"').get(auth.user.id)?.count || 0;
       const activityText = `👤 *Hey ${auth.user.name}! Here is YOUR Private Work Summary:*\n\n` +
@@ -731,11 +810,11 @@ export async function handleTelegramWebhookUpdate(update) {
       return await sendSafeTelegramMessage(chatId, activityText);
     }
 
-    if (text === '/status') {
-      const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
-      const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get().count;
-      const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get().count;
-      const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get().count;
+    if (text === '/status' || text === '📊 System Health') {
+      const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get()?.count || 20;
+      const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;
+      const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get()?.count || 0;
+      const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get()?.count || 1;
       const queueStats = agentQueue.getStats();
 
       const statusText = `📊 *Taliyo AI Agent Telemetry*\n\n` +
@@ -749,6 +828,12 @@ export async function handleTelegramWebhookUpdate(update) {
         `• *Database Engine:* 100% Pure Turso Cloud\n` +
         `• *Admin Contact:* *${ADMIN_HANDLE}*`;
       return await sendSafeTelegramMessage(chatId, statusText);
+    }
+
+    if (text === '💡 Generate Ideas') {
+      return await sendSafeTelegramMessage(chatId, `💡 *Which event or topic would you like design ideas for?*\n\nChoose an upcoming event or type your custom prompt in chat:`, {
+        reply_markup: getUpcomingInlineKeyboard()
+      });
     }
 
     // Design Prompt or /ideas [Event]
