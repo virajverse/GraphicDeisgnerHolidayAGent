@@ -618,25 +618,57 @@ export async function handleTelegramWebhookUpdate(update: any) {
         profileBadge = `\n🔍 *Instagram Profile:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (${instaProfile.followerCount.toLocaleString()} Followers)\n`;
       }
 
-      // Save pending user in Turso DB
+      // Check if Instagram profile was successfully verified by our live Scraper
+      const isAutoVerified = Boolean(instaProfile && instaProfile.username && targetHandle !== 'n/a');
+
+      if (isAutoVerified) {
+        // 1. AUTO-APPROVE IMMEDIATELY (Instant 0-Second Verification)
+        db.prepare(`
+          INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, instagram_handle)
+          VALUES (?, ?, ?, ?, 1, 'DESIGNER', 'APPROVED', ?)
+          ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED', name=?, instagram_handle=?
+        `).run(`user_${chatId}`, name, msg.from?.username || '', chatId.toString(), targetHandle, name, targetHandle);
+
+        const instantApprovedMsg = `🎉 *CONGRATULATIONS! YOUR ACCOUNT IS VERIFIED & ACTIVATED!*${profileBadge}\n` +
+          `✅ *Verified Channels:*\n` +
+          `• Instagram: [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
+          `• YouTube: *${ytChannel}*\n\n` +
+          `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active ho chuka hai!*\n` +
+          `Niche diye gaye buttons se shuru karein ya direct koi prompt bhejein:`;
+        
+        await sendSafeTelegramMessage(chatId, instantApprovedMsg, { reply_markup: DESIGNER_KEYBOARD });
+
+        // Inform Master Admin about automated AI approval
+        if (MASTER_ADMIN_CHAT_ID && botInstance) {
+          const adminNotice = `⚡ *[AI AUTO-APPROVED]* New Designer Verified!\n\n` +
+            `• *Name:* ${name}\n` +
+            `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle}) (${instaProfile?.followerCount.toLocaleString()} followers)\n` +
+            `• *YouTube Channel:* ${ytChannel}\n` +
+            `• *Chat ID:* \`${chatId}\`\n\n` +
+            `🟢 *Status:* Automatically approved & activated in 0ms!`;
+          await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, adminNotice);
+        }
+        return;
+      }
+
+      // 2. FALLBACK TO MANUAL ADMIN REVIEW IF NOT INSTANTLY VERIFIED
       db.prepare(`
         INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, instagram_handle)
         VALUES (?, ?, ?, ?, 0, 'DESIGNER', 'PENDING', ?)
         ON CONFLICT(id) DO UPDATE SET verification_status='PENDING', name=?, instagram_handle=?
       `).run(`user_${chatId}`, name, msg.from?.username || '', chatId.toString(), targetHandle, name, targetHandle);
 
-      // Confirm to user
-      const submittedMsg = `🎉 *REGISTRATION SUBMITTED SUCCESSFULLY!*${profileBadge}\n` +
+      const submittedMsg = `⏳ *APPLICATION SUBMITTED FOR REVIEW*\n\n` +
         `✅ *Your Details:*\n` +
         `• Name: *${name}*\n` +
         `• Instagram: *${targetHandle}*\n` +
         `• YouTube Channel: *${ytChannel}*\n\n` +
-        `⏳ *Status:* Aapki application Admin *@virajverse* ko submit ho chuki hai. Approval aate hi aapka AI Agent full active ho jayega!`;
+        `Hamare Admin *@virajverse* ise review karke turant approve karenge!`;
       await sendSafeTelegramMessage(chatId, submittedMsg);
 
       // Instantly Alert Master Admin with 1-Click Approval Buttons
       if (MASTER_ADMIN_CHAT_ID && botInstance) {
-        const adminAlertMsg = `🔔 *NEW DESIGNER REGISTRATION REQUEST*\n\n` +
+        const adminAlertMsg = `🔔 *MANUAL REVIEW REQUIRED: DESIGNER REGISTRATION*\n\n` +
           `• *Applicant:* ${name}\n` +
           `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
           `• *YouTube Channel:* ${ytChannel}\n` +
