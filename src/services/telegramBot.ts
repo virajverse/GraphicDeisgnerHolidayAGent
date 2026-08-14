@@ -5,6 +5,7 @@ import { fetchRealWorldContext } from './contextEngine.js';
 import { generateCreativeIdeas } from './ideationEngine.js';
 import { executeClusterQuery, MODEL_CLUSTERS } from './clusterModelRouter.js';
 import { buildFrontDispatcherSystemPrompt } from '../prompts/systemPrompts.js';
+import { scrapeInstagramProfile } from './instagramScraperEngine.js';
 import { agentQueue } from './requestQueueEngine.js';
 import { pruneDatabaseCache } from './dbPruner.js';
 import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord } from '../types/database.js';
@@ -604,8 +605,18 @@ export async function handleTelegramWebhookUpdate(update: any) {
     // Check Onboarding State Machine (Step 1: Capturing Name & Handle)
     const obState = onboardingTracker.get(chatId.toString());
     if (obState && obState.step === 'WAITING_NAME' && !text.startsWith('/')) {
-      onboardingTracker.set(chatId.toString(), { step: 'WAITING_SCREENSHOT', name: text, handle: text });
-      const step2Msg = `🚀 *STEP 2/2: FAST-TRACK VERIFICATION & ACCESS!*\n\n` +
+      const instaMatch = text.match(/@([a-zA-Z0-9._]+)/);
+      const targetHandle = instaMatch ? instaMatch[1] : text.split(/[-–,\s]+/)[1] || text;
+      onboardingTracker.set(chatId.toString(), { step: 'WAITING_SCREENSHOT', name: text, handle: targetHandle });
+
+      // Run live Instagram Scraper in real-time
+      const instaProfile = await scrapeInstagramProfile(targetHandle);
+      let profileBadge = '';
+      if (instaProfile) {
+        profileBadge = `\n🔍 *Instagram Profile Detected:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (${instaProfile.followerCount.toLocaleString()} Followers)\n`;
+      }
+
+      const step2Msg = `🚀 *STEP 2/2: FAST-TRACK VERIFICATION & ACCESS!*${profileBadge}\n` +
         `Apne designer account ko **Fast-Track Verify** karwane ke liye hamare official channels ko follow/subscribe karein:\n\n` +
         `1️⃣ *Instagram:* https://www.instagram.com/fearless.devx/\n` +
         `2️⃣ *YouTube Channel:* https://www.youtube.com/@VirajVerse016\n\n` +
