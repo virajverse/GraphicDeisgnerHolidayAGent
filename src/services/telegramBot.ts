@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
 import db from '../db/database.js';
@@ -431,14 +433,37 @@ export async function handleTelegramWebhookUpdate(update: any) {
     if (data === 'gate_register') {
       await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => {});
       onboardingTracker.set(chatId.toString(), { step: 'WAITING_DETAILS' });
-      const regStep1 = `🚀 *FREE DESIGNER REGISTRATION (STEP 1/2)*\n\n` +
-        `Taliyo Creative Intelligence AI Agent ka free access paane ke liye pehle hamare official channels ko **Follow & Subscribe** karein:\n\n` +
-        `1️⃣ *Instagram:* https://www.instagram.com/fearless.devx/\n` +
-        `2️⃣ *YouTube Channel:* https://www.youtube.com/@VirajVerse016\n\n` +
-        `👇 *Follow & Subscribe karne ke baad, chat me apni details bhejiye:*\n` +
+
+      const igPath = path.join(process.cwd(), 'public/assets/instagram_banner.png');
+      const ytPath = path.join(process.cwd(), 'public/assets/youtube_banner.png');
+
+      // 1. Send Instagram Photo Card with Direct Action Button
+      if (fs.existsSync(igPath) && botInstance) {
+        await botInstance.sendPhoto(chatId, igPath, {
+          caption: `📸 *STEP 1: FOLLOW ON INSTAGRAM*\n\n👉 Official Profile: [@fearless.devx](https://www.instagram.com/fearless.devx/)\nTap the button below to follow!`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '📸 Follow @fearless.devx', url: 'https://www.instagram.com/fearless.devx/' }]]
+          }
+        }).catch(() => {});
+      }
+
+      // 2. Send YouTube Photo Card with Direct Action Button
+      if (fs.existsSync(ytPath) && botInstance) {
+        await botInstance.sendPhoto(chatId, ytPath, {
+          caption: `▶️ *STEP 2: SUBSCRIBE ON YOUTUBE*\n\n👉 Official Channel: [@VirajVerse016](https://www.youtube.com/@VirajVerse016)\nTap the button below to subscribe!`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '▶️ Subscribe @VirajVerse016', url: 'https://www.youtube.com/@VirajVerse016' }]]
+          }
+        }).catch(() => {});
+      }
+
+      // 3. Send Instruction for details
+      const regStepPrompt = `👇 *Follow & Subscribe karne ke baad, chat me apni details bhejiye:*\n\n` +
         `\`Full Name | Instagram Handle | YouTube Channel Name\`\n\n` +
         `*(Example: Rahul Sharma | @rahul_graphics | @RahulDesignsYT)*`;
-      return await sendSafeTelegramMessage(chatId, regStep1);
+      return await sendSafeTelegramMessage(chatId, regStepPrompt);
     }
 
     // Admin Verification Actions: Approve or Reject
