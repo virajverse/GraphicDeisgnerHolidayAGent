@@ -3,500 +3,383 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Taliyo Creative Intelligence — n8n Workflow Studio v1.0</title>
-  <!-- Google Fonts: Inter & Outfit -->
+  <title>Taliyo Creative Intelligence — AI Creative Partner & Studio v2.0</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="n8n-theme">
-  <div class="n8n-app">
-    <!-- Top Navigation Header (n8n Header Style) -->
-    <header class="n8n-header">
-      <div class="header-left">
-        <div class="n8n-logo">
-          <span class="logo-node">
-            <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </span>
-          <span class="logo-title">taliyo</span>
-          <span class="logo-badge">AGENT WORKFLOW</span>
+<body class="cyber-dark-theme">
+  <div class="app-layout">
+    <!-- Top Cyber Header -->
+    <header class="top-nav-header">
+      <div class="header-brand-section">
+        <div class="brand-badge-glow">
+          <span class="pulse-dot"></span>
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
         </div>
-        <div class="workflow-name-container">
-          <h1 id="workflowTitle">Taliyo Creative Intelligence Agent Engine</h1>
-          <span class="workflow-status">
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggleActive" checked>
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="status-label green">Active</span>
-          </span>
+        <div class="brand-titles">
+          <div class="brand-name">TALIYO <span class="brand-accent">CREATIVE AI</span></div>
+          <div class="brand-sub">Model-Agnostic Cognitive Intelligence v2.0</div>
         </div>
       </div>
-      <div class="header-right">
-        <div class="nav-tab-pills">
-          <button class="nav-pill active" data-view="view-canvas" id="pillCanvas">
-            <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Canvas Workflow
-          </button>
-          <button class="nav-pill" data-view="view-briefings" id="pillBriefings">
-            <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.64 0-.44-.17-.85-.47-1.16-.3-.3-.48-.72-.48-1.18 0-.92.75-1.66 1.67-1.66h2.24c3.08 0 5.56-2.48 5.56-5.56 0-5.02-4.52-8.8-10.22-8.8z"/></svg>
-            6-Ideas Briefings
-          </button>
-          <button class="nav-pill" data-view="view-events" id="pillEvents">
-            <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Events Database
-          </button>
-          <button class="nav-pill" data-view="view-telegram" id="pillTelegram">
-            <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Telegram Bot
-          </button>
-          <button class="nav-pill" data-view="view-clients" id="pillClients">
-            <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-            Clients
-          </button>
+
+      <!-- Telemetry Live Badges -->
+      <div class="header-telemetry-pills">
+        <div class="telemetry-pill">
+          <span class="status-indicator online"></span>
+          <span class="pill-label">NVIDIA CLUSTERS:</span>
+          <span class="pill-val" id="pillCluster">27 NIMs Active</span>
         </div>
-        <button class="btn btn-n8n-execute" id="btnExecuteWorkflow">
-          <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Test Workflow
+        <div class="telemetry-pill">
+          <span class="status-indicator cloud"></span>
+          <span class="pill-label">TURSO CLOUD:</span>
+          <span class="pill-val">AWS Mumbai (Sync)</span>
+        </div>
+        <div class="telemetry-pill">
+          <span class="status-indicator fast"></span>
+          <span class="pill-label">LATENCY:</span>
+          <span class="pill-val" id="pillLatency">< 120ms</span>
+        </div>
+      </div>
+
+      <!-- Header Action Controls -->
+      <div class="header-actions">
+        <button class="btn btn-cyber-primary" id="btnHeaderAutoRadar">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          ⚡ Auto Radar Scan
+        </button>
+        <button class="btn btn-cyber-outline" id="btnHeaderAddEvent">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          ➕ Add Event
         </button>
       </div>
     </header>
 
-    <!-- VIEW 1: n8n Studio Workflow Canvas -->
-    <div class="n8n-studio-view main-view active" id="view-canvas">
-      <!-- Left Sidebar: Node Library / Palette -->
-      <aside class="n8n-palette">
-        <div class="palette-search">
-          <input type="text" id="nodeSearch" placeholder="Search nodes (e.g. Schedule, Gemini)...">
-        </div>
+    <!-- Sub-Header Navigation Tabs -->
+    <nav class="sub-nav-tabs">
+      <button class="nav-tab active" data-tab="tab-radar">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        ⚡ Live Creative Radar
+      </button>
+      <button class="nav-tab" data-tab="tab-calendar">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        🗓️ 30-Day Rolling Calendar
+      </button>
+      <button class="nav-tab" data-tab="tab-simulator">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        🤖 Telegram Bot Simulator
+      </button>
+      <button class="nav-tab" data-tab="tab-scraper">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        🔍 Live Multi-Source Scraper
+      </button>
+      <button class="nav-tab" data-tab="tab-clients">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        💼 Client Brand Vault
+      </button>
+      <button class="nav-tab" data-tab="tab-admin">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        👑 Super Admin Command
+      </button>
+    </nav>
 
-        <div class="node-category">
-          <div class="cat-title">TRIGGERS & INGESTION</div>
-          <div class="palette-node" draggable="true" data-type="trigger-cron">
-            <span class="node-type-icon trigger">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">T-2 Cron Trigger</span>
-              <span class="desc">Daily 08:00 AM Scan</span>
-            </div>
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content-viewport">
+      
+      <!-- TAB 1: Live Creative Radar (6-Angle Studio) -->
+      <section class="studio-tab-content active" id="tab-radar">
+        <div class="radar-hero-panel">
+          <div class="radar-headline-group">
+            <span class="hero-chip">✨ CURRENT STRATEGIC FOCUS // T-2 RADAR</span>
+            <h2 class="hero-title" id="radarEventTitle">Independence Day India (08-15)</h2>
+            <p class="hero-desc" id="radarContextSummary">Loading real-world cultural intelligence and market pulse...</p>
           </div>
-          <div class="palette-node" draggable="true" data-type="trigger-calendar">
-            <span class="node-type-icon trigger">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">Calendar Ingest</span>
-              <span class="desc">20+ Indian & UN Dates</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="node-category">
-          <div class="cat-title">INTELLIGENCE & ENGINES</div>
-          <div class="palette-node" draggable="true" data-type="engine-relevance">
-            <span class="node-type-icon engine">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">Relevance Filter</span>
-              <span class="desc">Score Threshold > 40</span>
-            </div>
-          </div>
-          <div class="palette-node" draggable="true" data-type="engine-context">
-            <span class="node-type-icon engine">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">Real-World News</span>
-              <span class="desc">Live Fact Extraction</span>
-            </div>
-          </div>
-          <div class="palette-node" draggable="true" data-type="engine-ideation">
-            <span class="node-type-icon engine">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1.55.65 2.8 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">6-Idea Generator</span>
-              <span class="desc">6 Category Mix</span>
-            </div>
-          </div>
-          <div class="palette-node" draggable="true" data-type="engine-recommend">
-            <span class="node-type-icon engine">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">Recommendation Rank</span>
-              <span class="desc">Top 2 & Platforms</span>
-            </div>
+          <div class="radar-opportunity-box">
+            <div class="opp-label">💡 ART DIRECTOR OPPORTUNITY HINT:</div>
+            <div class="opp-text" id="radarOpportunityHint">Celebrate progress, modern technological leadership, and authentic human emotion over clichéd patriotic stock graphics.</div>
           </div>
         </div>
 
-        <div class="node-category">
-          <div class="cat-title">OUTPUTS & ACTIONS</div>
-          <div class="palette-node" draggable="true" data-type="action-telegram">
-            <span class="node-type-icon action">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">Telegram Alert</span>
-              <span class="desc">Dispatch Alert Payload</span>
-            </div>
-          </div>
-          <div class="palette-node" draggable="true" data-type="action-sqlite">
-            <span class="node-type-icon action">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-            </span>
-            <div class="node-meta">
-              <span class="title">SQLite Store</span>
-              <span class="desc">Save Brief & Feedback</span>
-            </div>
+        <!-- 6 Distinct Concept Cards Grid -->
+        <div class="concepts-deck-header">
+          <div class="deck-title">🎨 6 READY-TO-DESIGN STRATEGIC CONCEPTS</div>
+          <div class="deck-actions">
+            <button class="btn btn-sm btn-cyber-outline" id="btnCopyAllConcepts">📋 Copy All Concepts</button>
+            <button class="btn btn-sm btn-cyber-primary" id="btnRegenerateRadar">🔄 Refresh Concepts</button>
           </div>
         </div>
-      </aside>
 
-      <!-- Center: Infinite Visual Canvas Grid -->
-      <main class="n8n-canvas-container" id="canvasContainer">
-        <!-- The Transform Layer handles pan/zoom for both SVG and Nodes -->
-        <div id="canvasTransformLayer" class="canvas-transform-layer">
-          <!-- SVG Connecting Lines Layer -->
-          <svg class="canvas-svg" id="canvasSvg"></svg>
+        <div class="concepts-grid" id="conceptsGrid">
+          <!-- Dynamically Injected 6 Cards -->
+        </div>
 
-          <!-- Canvas Background Grid & Canvas Wrapper -->
-          <div class="canvas-grid" id="canvasGrid">
-            <!-- Flow Nodes Container -->
-            <div class="nodes-layer" id="nodesLayer">
-            <!-- Node 1: T-2 Daily Scheduler -->
-            <div class="n8n-node node-trigger" id="node-1" style="left: 60px; top: 180px;" data-id="1">
-              <div class="node-header">
-                <span class="n-icon">
-                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </span>
-                <span class="n-title">T-2 Daily Trigger</span>
-                <span class="n-status-dot"></span>
-              </div>
-              <div class="node-body">
-                <div class="n-subtitle">Schedule: 08:00 AM</div>
-                <div class="n-pill">Lead: T-2 Days</div>
-              </div>
-              <div class="handle output-handle" data-node="1"></div>
-            </div>
+        <!-- Executive Recommendation Banner -->
+        <div class="executive-recommendation-card" id="radarRecommendationCard">
+          <div class="rec-badge">⭐ STRATEGIC ECD RECOMMENDATION</div>
+          <div class="rec-body" id="radarRecBody">#01 Educational Carousel & #04 Action Checklist offer 3.8x higher bookmark and save rates.</div>
+          <div class="rec-specs">
+            <span class="spec-tag" id="radarRecPlatform">📱 Target: Instagram Carousel + LinkedIn</span>
+            <span class="spec-tag" id="radarRecAudience">🎯 Audience: Tech Founders & Digital Creators</span>
+          </div>
+        </div>
+      </section>
 
-            <!-- Node 2: Calendar Ingestion -->
-            <div class="n8n-node node-trigger" id="node-2" style="left: 320px; top: 180px;" data-id="2">
-              <div class="handle input-handle" data-node="2"></div>
-              <div class="node-header">
-                <span class="n-icon">
-                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                </span>
-                <span class="n-title">Calendar DB Ingest</span>
-                <span class="n-status-dot"></span>
-              </div>
-              <div class="node-body">
-                <div class="n-subtitle">Events: 20 Loaded</div>
-                <div class="n-pill">India + UN Days</div>
-              </div>
-              <div class="handle output-handle" data-node="2"></div>
-            </div>
+      <!-- TAB 2: Rolling 30-Day Calendar -->
+      <section class="studio-tab-content" id="tab-calendar">
+        <div class="calendar-header-toolbar">
+          <div class="cal-title-group">
+            <h2>🗓️ Rolling 30-Day Marketing & Festival Radar</h2>
+            <p>Curated opportunities happening in the next 30 days — sorted by real-time countdown.</p>
+          </div>
+          <div class="cal-filter-pills">
+            <button class="filter-pill active" data-filter="ALL">All (Next 30 Days)</button>
+            <button class="filter-pill" data-filter="NATIONAL">🇮🇳 National</button>
+            <button class="filter-pill" data-filter="FESTIVAL">🪔 Festivals</button>
+            <button class="filter-pill" data-filter="GLOBAL">🌍 Global Days</button>
+            <button class="filter-pill" data-filter="BUSINESS">💼 Business</button>
+          </div>
+        </div>
 
-            <!-- Node 3: Relevance Filter Engine -->
-            <div class="n8n-node node-engine" id="node-3" style="left: 580px; top: 180px;" data-id="3">
-              <div class="handle input-handle" data-node="3"></div>
-              <div class="node-header">
-                <span class="n-icon">
-                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                </span>
-                <span class="n-title">Relevance Engine</span>
-                <span class="n-status-dot"></span>
-              </div>
-              <div class="node-body">
-                <div class="n-subtitle">Score Matrix Filter</div>
-                <div class="n-pill">Threshold >= 40</div>
-              </div>
-              <div class="handle output-handle" data-node="3"></div>
-            </div>
+        <div class="calendar-cards-grid" id="calendarGrid">
+          <!-- Injected 30-Day Event Cards -->
+        </div>
+      </section>
 
-            <!-- Node 4: Real-World News Context -->
-            <div class="n8n-node node-engine" id="node-4" style="left: 840px; top: 180px;" data-id="4">
-              <div class="handle input-handle" data-node="4"></div>
-              <div class="node-header">
-                <span class="n-icon">
-                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </span>
-                <span class="n-title">Context Synthesizer</span>
-                <span class="n-status-dot"></span>
-              </div>
-              <div class="node-body">
-                <div class="n-subtitle">Gemini / Web Search</div>
-                <div class="n-pill">Source Tracking</div>
-              </div>
-              <div class="handle output-handle" data-node="4"></div>
-            </div>
-
-            <!-- Node 5: 6 Creative Ideas Generator -->
-            <div class="n8n-node node-ai" id="node-5" style="left: 1100px; top: 180px;" data-id="5">
-              <div class="handle input-handle" data-node="5"></div>
-              <div class="node-header">
-                <span class="n-icon">
-                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1.55.65 2.8 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>
-                </span>
-                <span class="n-title">6-Idea Strategist</span>
-                <span class="n-status-dot"></span>
-              </div>
-              <div class="node-body">
-                <div class="n-subtitle">6 Distinct Categories</div>
-                <div class="n-pill">Educational → Experimental</div>
-              </div>
-              <div class="handle output-handle" data-node="5"></div>
-            </div>
-
-            <!-- Node 6: Telegram Alert Dispatcher -->
-            <div class="n8n-node node-action" id="node-6" style="left: 1360px; top: 180px;" data-id="6">
-              <div class="handle input-handle" data-node="6"></div>
-              <div class="node-header">
-                <span class="n-icon">
-                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                </span>
-                <span class="n-title">Telegram Agent Bot</span>
-                <span class="n-status-dot"></span>
-              </div>
-              <div class="node-body">
-                <div class="n-subtitle">Alert Delivery Engine</div>
-                <div class="n-pill">Inline Keyboard</div>
+      <!-- TAB 3: Interactive Telegram Bot Simulator -->
+      <section class="studio-tab-content" id="tab-simulator">
+        <div class="simulator-wrapper">
+          <div class="mobile-frame">
+            <div class="mobile-top-bar">
+              <div class="mobile-avatar">🤖</div>
+              <div class="mobile-bot-info">
+                <div class="mobile-bot-name">Taliyo Creative AI Agent</div>
+                <div class="mobile-bot-status">bot • 27 NIM Clusters Online</div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Canvas Controls Float -->
-        <div class="canvas-controls">
-          <button class="ctrl-btn" id="btnZoomIn">+</button>
-          <button class="ctrl-btn" id="btnZoomOut">-</button>
-          <button class="ctrl-btn" id="btnFitView">Fit</button>
-        </div>
-      </main>
+            <!-- Chat History Stream -->
+            <div class="mobile-chat-body" id="simChatBody">
+              <div class="chat-msg bot">
+                <div class="msg-bubble">
+                  ✨ *CREATIVE RADAR BRIEFING*<br><br>
+                  💬 _"Arre waah! Next 2 dino me World Photography Day aa raha hai — yahan 6 killer design angles ready hain!"_<br><br>
+                  📅 *Occasion:* World Photography Day (08-19)<br><br>
+                  🎨 *6 READY-TO-DESIGN CONCEPTS:*<br>
+                  • #01 [EDUCATIONAL] ➔ The Evolution of the Sensor<br>
+                  • #02 [EMOTIONAL] ➔ Behind the Lens: Unseen Observer<br>
+                  • #03 [BRAND-FOCUSED] ➔ Trapping Light with Passion<br>
+                  • #04 [SOCIAL] ➔ 5 Composition Rules Checklist<br>
+                  • #05 [INTERACTIVE] ➔ Guess the Focal Length Poll<br>
+                  • #06 [EXPERIMENTAL] ➔ 3D Kinetic Glass & Bokeh
+                </div>
+                <div class="msg-inline-btns">
+                  <button class="sim-inline-btn" onclick="simTriggerAction('specs')">🎨 Visual Specs</button>
+                  <button class="sim-inline-btn" onclick="simTriggerAction('save')">⭐ Save Briefing</button>
+                </div>
+              </div>
+            </div>
 
-      <!-- Right Drawer: Node Config & Output JSON Inspector -->
-      <aside class="n8n-inspector" id="inspectorDrawer">
-        <div class="inspector-header">
-          <div class="ins-title-group">
-            <span class="ins-icon" id="insIcon">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1.55.65 2.8 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>
-            </span>
-            <h3 id="insTitle">Node Settings</h3>
-          </div>
-          <button class="close-ins-btn" id="btnCloseInspector">✕</button>
-        </div>
-        <div class="inspector-tabs">
-          <button class="ins-tab active" data-instab="ins-parameters">Parameters</button>
-          <button class="ins-tab" data-instab="ins-output">Output JSON</button>
-        </div>
-        <div class="inspector-body">
-          <div class="ins-content active" id="ins-parameters">
-            <div id="insParamsContainer">
-              <p class="ins-hint">Click any node on the canvas to configure parameters and view live outputs.</p>
+            <!-- Input & Action Bar -->
+            <div class="mobile-input-bar">
+              <input type="text" id="simInput" placeholder="Send prompt or festival name (e.g. Diwali)...">
+              <button class="btn-send-sim" id="btnSimSend">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+
+            <!-- Docked Keypad Preview -->
+            <div class="mobile-docked-keypad">
+              <button class="key-btn" onclick="simSendQuick('⚡ Auto Radar Brief')">⚡ Auto Radar Brief</button>
+              <button class="key-btn" onclick="simSendQuick('🗓️ Full Calendar')">🗓️ Full Calendar</button>
+              <button class="key-btn" onclick="simSendQuick('🎨 Art Director Co-Pilot')">🎨 Art Director Co-Pilot</button>
+              <button class="key-btn" onclick="simSendQuick('💼 Client Profiles')">💼 Client Profiles</button>
+              <button class="key-btn" onclick="simSendQuick('💡 Custom Prompt')">💡 Custom Prompt</button>
+              <button class="key-btn" onclick="simSendQuick('👤 My Activity')">👤 My Activity</button>
             </div>
           </div>
-          <div class="ins-content" id="ins-output">
-            <pre class="json-viewer" id="jsonViewer">{ "status": "Ready", "waiting_for_execution": true }</pre>
-          </div>
         </div>
-      </aside>
-    </div>
+      </section>
 
-    <!-- VIEW 2: 6-Ideas Briefings Feed -->
-    <div class="main-view" id="view-briefings">
-      <div class="view-container">
-        <div class="section-header flex-between">
-          <div>
-            <h2>
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:6px;"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.64 0-.44-.17-.85-.47-1.16-.3-.3-.48-.72-.48-1.18 0-.92.75-1.66 1.67-1.66h2.24c3.08 0 5.56-2.48 5.56-5.56 0-5.02-4.52-8.8-10.22-8.8z"/></svg>
-              Creative Briefings & 6-Ideas Feed
-            </h2>
-            <span class="section-subtitle">Real-world context briefings generated for upcoming calendar dates</span>
-          </div>
-          <button class="btn btn-secondary" onclick="document.getElementById('btnExecuteWorkflow').click()">
-            <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Execute Workflow Now
-          </button>
-        </div>
-        <div id="briefingsFeed" class="briefings-list">
-          <div class="loading-spinner">Loading briefing feed...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEW 3: Event Database -->
-    <div class="main-view" id="view-events">
-      <div class="view-container">
-        <div class="section-header flex-between">
-          <div>
-            <h2>
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              Event Intelligence Database
-            </h2>
-            <span class="section-subtitle">Official Indian National Days, Festivals & UN Observances</span>
-          </div>
-          <div class="filter-controls">
-            <select id="eventCategoryFilter" class="select-input">
-              <option value="ALL">All Categories</option>
-              <option value="NATIONAL">National Days</option>
-              <option value="FESTIVAL">Festivals</option>
-              <option value="ENVIRONMENT">Environment & Earth</option>
-              <option value="AWARENESS">UN & Awareness Days</option>
-              <option value="TECHNOLOGY">Tech & Innovation</option>
-              <option value="BUSINESS">Business & Startup</option>
-            </select>
-            <button class="btn btn-secondary" id="btnAddEventModal">+ Custom Event</button>
-          </div>
-        </div>
-        <div id="eventsGrid" class="events-grid">
-          <div class="loading-spinner">Loading events database...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEW 4: Telegram Bot Sandbox -->
-    <div class="main-view" id="view-telegram">
-      <div class="view-container">
-        <div class="section-header">
-          <h2>
-            <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:6px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Telegram Agent Live Simulator
-          </h2>
-          <span class="section-subtitle">Test commands: <code>/upcoming</code>, <code>/today</code>, <code>/ideas Independence Day</code>, <code>/status</code></span>
-        </div>
-        <div class="telegram-sandbox">
-          <div class="sandbox-header">
-            <div class="bot-avatar">
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="16" y1="16" x2="16.01" y2="16"/></svg>
-            </div>
-            <div class="bot-info">
-              <strong>Taliyo Creative Intelligence Bot</strong>
-              <span class="online-status">● Bot Active (T-2 Alert Delivery Engine)</span>
+      <!-- TAB 4: Live Multi-Source Scraper Terminal -->
+      <section class="studio-tab-content" id="tab-scraper">
+        <div class="scraper-terminal-container">
+          <div class="scraper-search-panel">
+            <div class="scraper-input-group">
+              <input type="text" id="scraperQueryInput" placeholder="Enter query (e.g. Independence Day India, World Photography Day)..." value="Independence Day India">
+              <button class="btn btn-cyber-primary" id="btnRunScraper">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Run 3-Source Scrape
+              </button>
             </div>
           </div>
-          <div class="sandbox-messages" id="sandboxMessages">
-            <div class="msg bot-msg">
-              <strong>Taliyo Creative Agent:</strong> Welcome! I watch the world for you and tell you what is worth creating next.<br><br>
-              Try typing <code>/upcoming</code>, <code>/today</code>, or <code>/ideas World Environment Day</code> below!
+
+          <div class="terminal-view-deck">
+            <div class="terminal-header">
+              <span class="term-dot red"></span>
+              <span class="term-dot yellow"></span>
+              <span class="term-dot green"></span>
+              <span class="term-title">PARALLEL SCRAPER STREAM // GOOGLE NEWS RSS + DUCKDUCKGO + NATIONAL CALENDAR</span>
+            </div>
+            <pre class="terminal-code" id="scraperTerminalOutput">Click "Run 3-Source Scrape" to test real-time intelligence gathering...</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: Client Brand Vault -->
+      <section class="studio-tab-content" id="tab-clients">
+        <div class="clients-toolbar">
+          <div class="clients-title-group">
+            <h2>💼 Private Client Brand Guidelines Vault</h2>
+            <p>Manage distinct brand tones, target audiences, and creative styles for automated brief personalization.</p>
+          </div>
+          <button class="btn btn-cyber-primary" id="btnAddClientModal">➕ Add Client Profile</button>
+        </div>
+
+        <div class="clients-grid" id="clientsGrid">
+          <!-- Injected Client Cards -->
+        </div>
+      </section>
+
+      <!-- TAB 6: Super Admin Command Center -->
+      <section class="studio-tab-content" id="tab-admin">
+        <div class="admin-dashboard-deck">
+          <div class="admin-stats-row">
+            <div class="stat-card">
+              <div class="stat-label">👥 ACTIVE DESIGNERS</div>
+              <div class="stat-number" id="statDesigners">1</div>
+              <div class="stat-note">100% Private Workspace Isolation</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">📬 BRIEFINGS DISPATCHED</div>
+              <div class="stat-number" id="statAlerts">0</div>
+              <div class="stat-note">Automated T-2 Morning Alerts</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">🎨 STRATEGIC CONCEPTS</div>
+              <div class="stat-number" id="statIdeas">0</div>
+              <div class="stat-note">Generated across 6 Categories</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">☁️ CLOUD DATABASE</div>
+              <div class="stat-number" style="color: #00FF88;">ONLINE</div>
+              <div class="stat-note">Turso SQLite (AWS Mumbai)</div>
             </div>
           </div>
-          <div class="sandbox-input-bar">
-            <input type="text" id="sandboxInput" placeholder="Type /upcoming, /ideas Independence Day, or command..." autocomplete="off">
-            <button class="btn btn-primary" id="sandboxSend">Send Command</button>
+
+          <div class="admin-actions-grid">
+            <!-- Broadcast Composer -->
+            <div class="admin-action-box">
+              <h3>📢 Instant Multimedia Push Broadcaster</h3>
+              <p>Dispatch announcements, photo cards, or rich titled links to all active designers.</p>
+              <div class="form-group">
+                <label>Broadcast Message / Headline:</label>
+                <textarea id="broadcastInput" rows="3" placeholder="Enter announcement text for all registered designers..."></textarea>
+              </div>
+              <button class="btn btn-cyber-primary" id="btnAdminBroadcast">🚀 Send Live Broadcast</button>
+            </div>
+
+            <!-- Community Ground Manager -->
+            <div class="admin-action-box">
+              <h3>👥 Designer Community Ground Control</h3>
+              <p>Control the onboarding group gate and send invitations.</p>
+              <div class="form-group">
+                <label>Community Group URL:</label>
+                <input type="text" id="groundLinkInput" placeholder="https://t.me/virajverse" value="https://t.me/virajverse">
+              </div>
+              <div class="btn-group-row">
+                <button class="btn btn-cyber-outline" id="btnToggleGround">Toggle Gate: ON / OFF</button>
+                <button class="btn btn-cyber-primary" id="btnNotifyGround">👥 Broadcast Ground Invite</button>
+              </div>
+            </div>
+
+            <!-- DPO Dataset Exporter -->
+            <div class="admin-action-box">
+              <h3>📥 DPO / RLHF Training Dataset</h3>
+              <p>Export user preferences, saved concepts, and likes/dislikes as JSONL for custom LoRA fine-tuning.</p>
+              <button class="btn btn-cyber-outline" id="btnExportDPO">💾 Export taliyo_dpo_dataset.jsonl</button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- VIEW 5: Clients Manager -->
-    <div class="main-view" id="view-clients">
-      <div class="view-container">
-        <div class="section-header flex-between">
-          <div>
-            <h2>
-              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:6px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-              Client Profiles & Commercial Intelligence
-            </h2>
-            <span class="section-subtitle">Tailor event briefings across different client industries (NGO, SaaS, Restaurant, Tech)</span>
-          </div>
-          <button class="btn btn-secondary" id="btnAddClientModal">+ Add Client Profile</button>
-        </div>
-        <div id="clientsGrid" class="clients-grid">
-          <div class="loading-spinner">Loading client profiles...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom Execution Console (n8n Execution Log Bar) -->
-    <footer class="n8n-execution-bar" id="executionBar">
-      <div class="ex-left">
-        <span class="ex-status-icon idle" id="exStatusIcon">
-          <svg class="svg-icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        </span>
-        <span class="ex-status-text" id="exStatusText">Workflow Ready. Click "Test Workflow" to run pipeline.</span>
-      </div>
-      <div class="ex-right">
-        <span class="ex-time" id="exDuration">Duration: --</span>
-        <button class="btn-sm btn-secondary" id="btnToggleLogConsole">Console Log ▲</button>
-      </div>
-    </footer>
+    </main>
   </div>
 
-  <!-- Custom Event Modal -->
-  <div class="modal-backdrop" id="modalAddEvent">
-    <div class="modal-box glass-panel">
-      <h3>+ Add Custom Event</h3>
-      <form id="formAddEvent">
+  <!-- MODAL: Add Event -->
+  <div class="modal-overlay" id="modalAddEvent">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>➕ Add Custom Creative Event</h3>
+        <button class="modal-close" onclick="closeModal('modalAddEvent')">&times;</button>
+      </div>
+      <div class="modal-body">
         <div class="form-group">
           <label>Event Name:</label>
-          <input type="text" id="customEvtName" class="text-input" required placeholder="e.g. National Creator Day">
+          <input type="text" id="addEvtName" placeholder="e.g. Ganesh Chaturthi">
         </div>
         <div class="form-group">
           <label>Date (MM-DD):</label>
-          <input type="text" id="customEvtDate" class="text-input" required placeholder="e.g. 09-20">
+          <input type="text" id="addEvtDate" placeholder="09-07">
         </div>
         <div class="form-group">
           <label>Category:</label>
-          <select id="customEvtCat" class="select-input">
-            <option value="BUSINESS">BUSINESS</option>
-            <option value="TECHNOLOGY">TECHNOLOGY</option>
-            <option value="NATIONAL">NATIONAL</option>
-            <option value="FESTIVAL">FESTIVAL</option>
-            <option value="AWARENESS">AWARENESS</option>
+          <select id="addEvtCat">
+            <option value="NATIONAL">National Holiday</option>
+            <option value="FESTIVAL">Cultural Festival</option>
+            <option value="GLOBAL">Global Marketing Day</option>
+            <option value="BUSINESS">Business & Startup Day</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Importance Score (0-100):</label>
-          <input type="number" id="customEvtImportance" class="text-input" value="85" min="0" max="100">
+          <label>Importance Score (1-100):</label>
+          <input type="number" id="addEvtScore" value="85" min="1" max="100">
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="btnCloseEventModal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Event</button>
-        </div>
-      </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cyber-outline" onclick="closeModal('modalAddEvent')">Cancel</button>
+        <button class="btn btn-cyber-primary" id="btnSubmitAddEvent">Save Event</button>
+      </div>
     </div>
   </div>
 
-  <!-- Add Client Modal -->
-  <div class="modal-backdrop" id="modalAddClient">
-    <div class="modal-box glass-panel">
-      <h3>+ Add Client Profile</h3>
-      <form id="formAddClient">
+  <!-- MODAL: Add Client -->
+  <div class="modal-overlay" id="modalAddClient">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>➕ Add Client Brand Guidelines</h3>
+        <button class="modal-close" onclick="closeModal('modalAddClient')">&times;</button>
+      </div>
+      <div class="modal-body">
         <div class="form-group">
-          <label>Client Name:</label>
-          <input type="text" id="clientNameInput" class="text-input" required placeholder="e.g. Zen Bite Restaurant">
+          <label>Client / Brand Name:</label>
+          <input type="text" id="addClientName" placeholder="e.g. GreenEarth Foundation">
         </div>
         <div class="form-group">
-          <label>Industry:</label>
-          <select id="clientIndustryInput" class="select-input">
-            <option value="Restaurant">Restaurant / Food</option>
-            <option value="SaaS">SaaS / Tech</option>
-            <option value="NGO">NGO / Non-profit</option>
-            <option value="Education">Education</option>
-            <option value="E-commerce">E-commerce</option>
-          </select>
+          <label>Industry Vertical:</label>
+          <input type="text" id="addClientIndustry" placeholder="e.g. Non-Profit / Sustainability">
+        </div>
+        <div class="form-group">
+          <label>Target Audience:</label>
+          <input type="text" id="addClientAudience" placeholder="e.g. Eco-conscious youth & corporate donors">
         </div>
         <div class="form-group">
           <label>Brand Tone:</label>
-          <input type="text" id="clientToneInput" class="text-input" placeholder="e.g. Playful, Warm & Vibrant">
+          <input type="text" id="addClientTone" placeholder="e.g. Inspiring, Organic, Trustworthy">
         </div>
         <div class="form-group">
-          <label>Creative Style:</label>
-          <input type="text" id="clientStyleInput" class="text-input" placeholder="e.g. High visual food photography & clean typography">
+          <label>Creative Art Style:</label>
+          <input type="text" id="addClientStyle" placeholder="e.g. Earthy tones, human portraiture, clean serif">
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="btnCloseClientModal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Client</button>
-        </div>
-      </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cyber-outline" onclick="closeModal('modalAddClient')">Cancel</button>
+        <button class="btn btn-cyber-primary" id="btnSubmitAddClient">Save Brand</button>
+      </div>
     </div>
   </div>
-
-  <!-- Toast Notification Container -->
-  <div id="toastContainer" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>
