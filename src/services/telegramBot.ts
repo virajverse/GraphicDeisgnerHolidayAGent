@@ -609,27 +609,55 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const targetHandle = instaMatch ? instaMatch[1] : (parts[1] ? parts[1].replace('@', '') : 'n/a');
       const ytChannel = parts[2] || (parts.length > 1 ? parts[parts.length - 1] : 'YouTube User');
 
-      onboardingTracker.set(chatId.toString(), {
-        step: 'WAITING_SCREENSHOT',
-        name,
-        handle: targetHandle,
-        youtubeName: ytChannel
-      });
+      onboardingTracker.delete(chatId.toString());
 
       // Run live Instagram Scraper in real-time
       const instaProfile = await scrapeInstagramProfile(targetHandle);
       let profileBadge = '';
       if (instaProfile) {
-        profileBadge = `\n🔍 *Instagram Profile Detected:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (${instaProfile.followerCount.toLocaleString()} Followers)\n`;
+        profileBadge = `\n🔍 *Instagram Profile:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (${instaProfile.followerCount.toLocaleString()} Followers)\n`;
       }
 
-      const step2Msg = `📸 *STEP 2/2: UPLOAD PROOF SCREENSHOT*${profileBadge}\n\n` +
-        `✅ *Details Recorded:*\n` +
+      // Save pending user in Turso DB
+      db.prepare(`
+        INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, instagram_handle)
+        VALUES (?, ?, ?, ?, 0, 'DESIGNER', 'PENDING', ?)
+        ON CONFLICT(id) DO UPDATE SET verification_status='PENDING', name=?, instagram_handle=?
+      `).run(`user_${chatId}`, name, msg.from?.username || '', chatId.toString(), targetHandle, name, targetHandle);
+
+      // Confirm to user
+      const submittedMsg = `🎉 *REGISTRATION SUBMITTED SUCCESSFULLY!*${profileBadge}\n` +
+        `✅ *Your Details:*\n` +
         `• Name: *${name}*\n` +
         `• Instagram: *${targetHandle}*\n` +
         `• YouTube Channel: *${ytChannel}*\n\n` +
-        `📸 *Ab bas Follow & Subscribe ka 1 SCREENSHOT ISI BOT MEIN photo ki tarah bhej dijiye!* Admin review karke turant aapka access activate karenge!`;
-      return await sendSafeTelegramMessage(chatId, step2Msg);
+        `⏳ *Status:* Aapki application Admin *@virajverse* ko submit ho chuki hai. Approval aate hi aapka AI Agent full active ho jayega!`;
+      await sendSafeTelegramMessage(chatId, submittedMsg);
+
+      // Instantly Alert Master Admin with 1-Click Approval Buttons
+      if (MASTER_ADMIN_CHAT_ID && botInstance) {
+        const adminAlertMsg = `🔔 *NEW DESIGNER REGISTRATION REQUEST*\n\n` +
+          `• *Applicant:* ${name}\n` +
+          `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
+          `• *YouTube Channel:* ${ytChannel}\n` +
+          `• *Telegram User:* @${msg.from?.username || 'n/a'}\n` +
+          `• *Chat ID:* \`${chatId}\`\n\n` +
+          `👇 *1-Tap Approve or Reject:*`;
+
+        const adminVerifyButtons = {
+          inline_keyboard: [
+            [
+              { text: `✅ Approve Designer`, callback_data: `admin_appr_${chatId}` },
+              { text: `❌ Reject`, callback_data: `admin_rej_${chatId}` }
+            ]
+          ]
+        };
+
+        await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, adminAlertMsg, {
+          reply_markup: adminVerifyButtons
+        });
+      }
+      return;
     }
 
     // Check Authentication
