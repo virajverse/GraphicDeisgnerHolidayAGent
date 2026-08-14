@@ -282,6 +282,28 @@ export function exportDPOTrainingDataset(): { buffer: Buffer; count: number; fil
   return { buffer, count: jsonlLines.length, filename };
 }
 
+function getDaysRemaining(eventDateMMDD: string): number {
+  if (!eventDateMMDD || !eventDateMMDD.includes('-')) return 999;
+  const [mStr, dStr] = eventDateMMDD.split('-');
+  const eventMonth = parseInt(mStr, 10) - 1;
+  const eventDay = parseInt(dStr, 10);
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  let target = new Date(currentYear, eventMonth, eventDay, 23, 59, 59);
+  const diffMs = target.getTime() - now.getTime();
+  let daysDiff = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  // Rollover to next year if already passed this year
+  if (daysDiff < 0) {
+    target = new Date(currentYear + 1, eventMonth, eventDay, 23, 59, 59);
+    daysDiff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  return daysDiff;
+}
+
 export async function processAgentDesignRequest(chatId: string | number, queryText: string, user: UserRecord | null = null) {
   if (!botInstance) return;
   const strChatId = chatId.toString();
@@ -294,9 +316,31 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
   activeProcessingUsers.add(strChatId);
   botInstance.sendChatAction(chatId, 'typing');
 
+  const STAGE_1_STEPS = [
+    `🔍 🚶‍♂️ _Scanning Google News RSS & live media trends for "${queryText}"..._`,
+    `📡 🏃‍♂️ _Scraping real-world cultural pulse & live headlines around "${queryText}"..._`,
+    `🌐 🕵️‍♂️ _Investigating breaking audience discussions and hashtags for "${queryText}"..._`
+  ];
+
+  const STAGE_2_STEPS = [
+    `🧠 ⚡ _Synthesizing target audience psychology & design opportunities..._`,
+    `💡 🔮 _Extracting scroll-stopping visual hooks and campaign angles..._`,
+    `📊 🧭 _Analyzing cultural sentiments and brand engagement patterns..._`
+  ];
+
+  const STAGE_3_STEPS = [
+    `🎨 🕺 _Mixing custom Hex palettes (#0A0E17, #00FF88) & typography pairings..._`,
+    `📐 💃 _Calculating 1080x1350 px layout margins, 3D depth & lighting specs..._`,
+    `✨ 🎭 _Calibrating aesthetic contrast, textures, and visual hierarchy..._`
+  ];
+
+  const randomStage1 = STAGE_1_STEPS[Math.floor(Math.random() * STAGE_1_STEPS.length)];
+  const randomStage2 = STAGE_2_STEPS[Math.floor(Math.random() * STAGE_2_STEPS.length)];
+  const randomStage3 = STAGE_3_STEPS[Math.floor(Math.random() * STAGE_3_STEPS.length)];
+
   const progressMsg = await botInstance.sendMessage(
     chatId,
-    `🔍 _Analyzing real-world marketing trends for "${queryText}"..._`,
+    randomStage1,
     { parse_mode: 'Markdown' }
   );
 
@@ -315,12 +359,22 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
     const userProfile: UserRecord = user || db.prepare("SELECT * FROM users WHERE id = 'default_user'").get();
     const client: ClientRecord = db.prepare("SELECT * FROM clients WHERE user_id = ? OR user_id = 'default_user' LIMIT 1").get(userProfile.id);
 
-    await botInstance.editMessageText(
-      `🎨 _Crafting 6 strategic design concepts, headlines & color palettes..._`,
-      { chat_id: chatId, message_id: progressMsg.message_id, parse_mode: 'Markdown' }
-    ).catch(() => {});
+    // Live Step 1 -> Step 2 Morphing
+    await botInstance.editMessageText(randomStage2, {
+      chat_id: chatId,
+      message_id: progressMsg.message_id,
+      parse_mode: 'Markdown'
+    }).catch(() => {});
 
     const context = await fetchRealWorldContext(event);
+
+    // Live Step 2 -> Step 3 Morphing
+    await botInstance.editMessageText(randomStage3, {
+      chat_id: chatId,
+      message_id: progressMsg.message_id,
+      parse_mode: 'Markdown'
+    }).catch(() => {});
+
     const ideation = await generateCreativeIdeas({ event, context, userProfile, clientProfile: client });
 
     const alertData = {
@@ -352,6 +406,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
     });
 
   } catch (err: any) {
+    console.error(`[Agent Processing Error]: ${err.message}`);
     await botInstance.editMessageText(`⚠️ *Agent Note:* Please try asking your creative prompt again.`, {
       chat_id: chatId,
       message_id: progressMsg.message_id,
@@ -366,43 +421,58 @@ export function getFullCalendarInlineKeyboard() {
   return {
     inline_keyboard: [
       [
-        { text: '🇮🇳 National Holidays', callback_data: 'cal_national' },
-        { text: '🪔 Festivals & Culture', callback_data: 'cal_festival' }
+        { text: '🇮🇳 Next 30 Days: National', callback_data: 'cal_national' },
+        { text: '🪔 Next 30 Days: Festivals', callback_data: 'cal_festival' }
       ],
       [
-        { text: '🌍 Global Marketing Days', callback_data: 'cal_global' },
-        { text: '💼 Business & Startups', callback_data: 'cal_business' }
+        { text: '🌍 Next 30 Days: Global', callback_data: 'cal_global' },
+        { text: '💼 Next 30 Days: Business', callback_data: 'cal_business' }
       ],
       [
-        { text: '📋 View All Events', callback_data: 'cal_all' }
+        { text: '📋 All Upcoming (30 Days)', callback_data: 'cal_all' }
       ]
     ]
   };
 }
 
 export function handleFullCalendarCommand(category = 'ALL'): string {
-  let events: EventRecord[] = [];
+  let allEvents: EventRecord[] = [];
   if (category === 'NATIONAL') {
-    events = db.prepare("SELECT * FROM events WHERE category = 'NATIONAL' OR country = 'India' ORDER BY date ASC").all();
+    allEvents = db.prepare("SELECT * FROM events WHERE category = 'NATIONAL' OR country = 'India'").all();
   } else if (category === 'FESTIVAL') {
-    events = db.prepare("SELECT * FROM events WHERE category = 'FESTIVAL' OR category = 'CULTURAL' ORDER BY date ASC").all();
+    allEvents = db.prepare("SELECT * FROM events WHERE category = 'FESTIVAL' OR category = 'CULTURAL'").all();
   } else if (category === 'GLOBAL') {
-    events = db.prepare("SELECT * FROM events WHERE category = 'GLOBAL' OR category = 'AWARENESS' ORDER BY date ASC").all();
+    allEvents = db.prepare("SELECT * FROM events WHERE category = 'GLOBAL' OR category = 'AWARENESS'").all();
   } else if (category === 'BUSINESS') {
-    events = db.prepare("SELECT * FROM events WHERE category = 'BUSINESS' OR category = 'TECH' ORDER BY date ASC").all();
+    allEvents = db.prepare("SELECT * FROM events WHERE category = 'BUSINESS' OR category = 'TECH'").all();
   } else {
-    events = db.prepare("SELECT * FROM events ORDER BY date ASC LIMIT 20").all();
+    allEvents = db.prepare("SELECT * FROM events").all();
   }
 
-  let title = category === 'ALL' ? 'FULL MARKETING & FESTIVAL CALENDAR' : `${category} CALENDAR`;
+  // Calculate 30-Day Rolling Window for each event
+  const enriched = allEvents.map(evt => ({
+    ...evt,
+    daysLeft: getDaysRemaining(evt.date)
+  })).sort((a, b) => a.daysLeft - b.daysLeft);
+
+  // Filter for next 30 days
+  let eventsIn30Days = enriched.filter(e => e.daysLeft >= 0 && e.daysLeft <= 30);
+
+  // If fewer than 3 events in exact 30 days, take the closest 5 upcoming events
+  if (eventsIn30Days.length === 0) {
+    eventsIn30Days = enriched.slice(0, 5);
+  }
+
+  let title = category === 'ALL' ? 'UPCOMING 30 DAYS CREATIVE CALENDAR' : `NEXT 30 DAYS: ${category} CALENDAR`;
   let text = `🗓️ *${title}*\n\n`;
 
-  events.forEach((evt, i) => {
+  eventsIn30Days.forEach((evt, i) => {
     const flag = evt.country === 'India' ? '🇮🇳' : '🌍';
-    text += `${i + 1}. ${flag} *${evt.name}* — \`${evt.date}\` [${evt.category}]\n`;
+    const countdown = evt.daysLeft === 0 ? '🔥 TODAY' : evt.daysLeft === 1 ? '⚡ Tomorrow' : `In ${evt.daysLeft} days`;
+    text += `${i + 1}. ${flag} *${evt.name}* — \`${evt.date}\` (_${countdown}_) [${evt.category}]\n`;
   });
 
-  text += `\n💡 *Tip:* Chat me kisi bhi festival ka naam likhein ya niche categories browse karein!`;
+  text += `\n💡 *Tip:* Chat me kisi bhi festival ka naam likhein ya 6 instant ideas ke liye prompt bhejein!`;
   return text;
 }
 
