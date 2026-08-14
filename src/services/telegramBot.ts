@@ -52,7 +52,7 @@ export const DESIGNER_KEYBOARD = {
   keyboard: [
     [{ text: '⚡ Auto Radar Brief' }, { text: '🗓️ Full Calendar' }],
     [{ text: '💡 Custom Prompt' }, { text: '💼 Client Profiles' }],
-    [{ text: '🌐 Language / भाषा' }, { text: '👤 My Activity' }]
+    [{ text: '🌐 Language (EN/Hinglish)' }, { text: '👤 My Activity' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -1114,11 +1114,11 @@ export async function handleTelegramWebhookUpdate(update: any) {
       });
     }
 
-    if (text === '/language' || text === '🌐 Language / भाषा') {
+    if (text === '/language' || text === '🌐 Language (EN/Hinglish)' || text === '🌐 Language / भाषा' || text.toLowerCase().includes('language')) {
       const currentLang = auth.user?.language || 'HINGLISH';
-      const langPrompt = `🌐 *LANGUAGE PREFERENCE / भाषा सेटिंग्स*\n\n` +
+      const langPrompt = `🌐 *LANGUAGE SETTINGS (ENGLISH / HINGLISH)*\n\n` +
         `Current Setting: *${currentLang === 'ENGLISH' ? '🇬🇧 English (Global)' : '🇮🇳 Hinglish (Desi / India)'}*\n\n` +
-        `Choose your preferred briefing & conversational language:`;
+        `Apni pasandida bhasha chunein / Choose your preferred briefing language:`;
       return await sendSafeTelegramMessage(chatId, langPrompt, {
         reply_markup: LANGUAGE_INLINE_KEYBOARD
       });
