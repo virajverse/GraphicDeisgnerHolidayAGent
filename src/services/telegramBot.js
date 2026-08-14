@@ -134,6 +134,27 @@ export function formatTelegramAlertMessage(event, alertData, context, ideationRe
   return msg;
 }
 
+// Anti-Spam 4-Second User Cooldown Tracker
+const userCooldownTracker = new Map();
+const COOLDOWN_MS = 4000; // 4 seconds gap between actions
+
+// Double-Tap Blocker (Prevents running multiple simultaneous generations for same user)
+const activeProcessingUsers = new Set();
+
+function checkUserCooldown(chatId) {
+  const now = Date.now();
+  const lastTime = userCooldownTracker.get(chatId.toString()) || 0;
+  const timePassed = now - lastTime;
+
+  if (timePassed < COOLDOWN_MS) {
+    const remainingSec = Math.ceil((COOLDOWN_MS - timePassed) / 1000);
+    return { allowed: false, remainingSec };
+  }
+
+  userCooldownTracker.set(chatId.toString(), now);
+  return { allowed: true, remainingSec: 0 };
+}
+
 export const MAIN_REPLY_KEYBOARD = {
   keyboard: [
     [{ text: '⚡ Today\'s Focus' }, { text: '📅 Upcoming Dates' }],
@@ -141,27 +162,7 @@ export const MAIN_REPLY_KEYBOARD = {
     [{ text: '👤 My Activity' }, { text: '📊 System Health' }]
   ],
   resize_keyboard: true,
-  persistent: true
-};
-
-export const START_INLINE_KEYBOARD = {
-  inline_keyboard: [
-    [
-      { text: '⚡ Today\'s Focus', callback_data: 'menu_today' },
-      { text: '📅 Upcoming Dates', callback_data: 'menu_upcoming' }
-    ],
-    [
-      { text: '💼 Client Profiles', callback_data: 'menu_clients' },
-      { text: '👤 My Activity', callback_data: 'menu_activity' }
-    ],
-    [
-      { text: '📊 System Health', callback_data: 'menu_status' },
-      { text: '💬 Contact Admin', callback_data: 'menu_contact' }
-    ],
-    [
-      { text: '📖 Full Designer Guide', callback_data: 'menu_help' }
-    ]
-  ]
+  is_persistent: true
 };
 
 export function getUpcomingInlineKeyboard() {
@@ -200,13 +201,10 @@ export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN) {
 
       const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! Welcome to Taliyo Creative Intelligence*\n\n` +
         `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
-        `👇 *Tap any quick button below or type naturally:* e.g.\n` +
-        `• *"Independence Day ideas for NGO client"*\n` +
-        `• *"What should I design for Diwali?"*\n` +
-        `• *"3 carousel poster ideas for SaaS launch"*`;
+        `👇 *Use the persistent menu buttons below your typing box for 1-tap navigation, or type any prompt naturally!*`;
       
       sendSafeTelegramMessage(chatId, welcome, {
-        reply_markup: START_INLINE_KEYBOARD
+        reply_markup: MAIN_REPLY_KEYBOARD
       });
     });
 
@@ -466,6 +464,14 @@ export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN) {
 
 async function processAgentDesignRequest(chatId, queryText, user = null) {
   if (!botInstance) return;
+  const strChatId = chatId.toString();
+
+  // Double-Tap Blocker: prevent duplicate simultaneous runs for the same user
+  if (activeProcessingUsers.has(strChatId)) {
+    return sendSafeTelegramMessage(chatId, '⚙️ *Request in Progress:* Aapki design briefing abhi generate ho rahi hai! Please 4-5 second wait karein.');
+  }
+
+  activeProcessingUsers.add(strChatId);
 
   botInstance.sendChatAction(chatId, 'typing');
 
@@ -537,6 +543,8 @@ async function processAgentDesignRequest(chatId, queryText, user = null) {
       message_id: progressMsg.message_id,
       parse_mode: 'Markdown'
     }).catch(() => {});
+  } finally {
+    activeProcessingUsers.delete(strChatId);
   }
 }
 
@@ -607,6 +615,15 @@ export async function handleTelegramWebhookUpdate(update) {
     const query = update.callback_query;
     const chatId = query.message.chat.id;
     const data = query.data;
+
+    // Cooldown check for button spammers
+    const cooldown = checkUserCooldown(chatId);
+    if (!cooldown.allowed) {
+      return await botInstance.answerCallbackQuery(query.id, {
+        text: `⏳ Please wait ${cooldown.remainingSec}s before tapping another button!`,
+        show_alert: true
+      }).catch(() => {});
+    }
 
     if (data === 'menu_today') {
       await botInstance.answerCallbackQuery(query.id, { text: '⚡ Loading Today\'s Focus...' }).catch(() => {});
@@ -749,16 +766,21 @@ export async function handleTelegramWebhookUpdate(update) {
       return sendAccessRestrictedCard(chatId);
     }
 
+    // Check Cooldown for rapid tapping / spamming
+    if (text !== '/start' && text.toLowerCase() !== 'start' && !text.startsWith('/register')) {
+      const cd = checkUserCooldown(chatId);
+      if (!cd.allowed) {
+        return await sendSafeTelegramMessage(chatId, `⏳ *Cooling Period Active:* Please wait *${cd.remainingSec}s* before tapping another button.`);
+      }
+    }
+
     // Authenticated Commands & Reply Keyboard Taps
     if (text === '/start' || text.toLowerCase() === 'start') {
       const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! Welcome to Taliyo Creative Intelligence*\n\n` +
         `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
-        `👇 *Tap any quick button below or type naturally:* e.g.\n` +
-        `• *"Independence Day ideas for NGO client"*\n` +
-        `• *"What should I design for Diwali?"*\n` +
-        `• *"3 carousel poster ideas for SaaS launch"*`;
+        `👇 *Use the persistent menu buttons below your typing box for 1-tap navigation, or type any prompt naturally!*`;
       return await sendSafeTelegramMessage(chatId, welcome, {
-        reply_markup: START_INLINE_KEYBOARD
+        reply_markup: MAIN_REPLY_KEYBOARD
       });
     }
 
