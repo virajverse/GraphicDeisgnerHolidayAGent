@@ -742,6 +742,88 @@ export async function handleTelegramWebhookUpdate(update: any) {
         }
       }
 
+      if (text.startsWith('/addevent')) {
+        const parts = text.replace('/addevent', '').trim().split('|').map(s => s.trim());
+        if (parts.length < 2) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/addevent Event Name | MM-DD | Category | Importance\`\n*(Example: \`/addevent Ganesh Chaturthi | 09-07 | FESTIVAL | 90\`)*`);
+        }
+        const [name, date, category = 'BUSINESS', importance = '85'] = parts;
+        const id = `evt_custom_${Date.now()}`;
+        db.prepare(`
+          INSERT INTO events (id, name, date, category, importance, country, source)
+          VALUES (?, ?, ?, ?, ?, 'India', 'Admin Panel')
+        `).run(id, name, date, category, parseInt(importance));
+        return await sendSafeTelegramMessage(chatId, `✅ *EVENT ADDED:* *${name}* (${date}) successfully added to calendar database!`);
+      }
+
+      if (text.startsWith('/delevent')) {
+        const query = text.replace('/delevent', '').trim();
+        if (!query) return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/delevent Event Name\``);
+        db.prepare('DELETE FROM events WHERE name LIKE ?').run(`%${query}%`);
+        return await sendSafeTelegramMessage(chatId, `🗑️ *EVENT DELETED:* Any event matching "${query}" removed from calendar.`);
+      }
+
+      if (text.startsWith('/addclient')) {
+        const parts = text.replace('/addclient', '').trim().split('|').map(s => s.trim());
+        if (parts.length < 2) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/addclient Name | Industry | Brand Tone | Creative Style\`\n*(Example: \`/addclient Acme Corp | SaaS | Sleek & Crisp | Dark Mode Glassmorphism\`)*`);
+        }
+        const [name, industry, brandTone = 'Professional & Modern', creativeStyle = 'Minimalist'] = parts;
+        const id = `client_${Date.now()}`;
+        db.prepare(`
+          INSERT INTO clients (id, user_id, name, industry, brand_tone, creative_style)
+          VALUES (?, 'default_user', ?, ?, ?, ?)
+        `).run(id, name, industry, brandTone, creativeStyle);
+        return await sendSafeTelegramMessage(chatId, `✅ *CLIENT PROFILE SAVED:* *${name}* (${industry}) added to active clients!`);
+      }
+
+      if (text.startsWith('/revoke')) {
+        const targetId = text.replace('/revoke', '').trim();
+        if (!targetId) return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/revoke CHAT_ID\``);
+        db.prepare('UPDATE users SET is_approved = 0, verification_status = "REJECTED" WHERE telegram_chat_id = ?').run(targetId);
+        await sendSafeTelegramMessage(targetId, `🔒 *Access Notice:* Your designer access has been revoked by Admin.`);
+        return await sendSafeTelegramMessage(chatId, `🚫 Access revoked for user \`${targetId}\`.`);
+      }
+
+      if (text.startsWith('/makeadmin')) {
+        const targetId = text.replace('/makeadmin', '').trim();
+        if (!targetId) return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/makeadmin CHAT_ID\``);
+        db.prepare('UPDATE users SET role = "ADMIN", is_approved = 1 WHERE telegram_chat_id = ?').run(targetId);
+        await sendSafeTelegramMessage(targetId, `👑 *Promoted to Admin:* You now have Admin privileges! Send /start to reload keypad.`, { reply_markup: ADMIN_MASTER_KEYBOARD });
+        return await sendSafeTelegramMessage(chatId, `👑 User \`${targetId}\` promoted to Admin.`);
+      }
+
+      if (text.startsWith('/broadcast')) {
+        const broadcastMsg = text.replace('/broadcast', '').trim();
+        if (!broadcastMsg) return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/broadcast Your announcement text here\``);
+        const users: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1').all();
+        let sentCount = 0;
+        for (const u of users) {
+          if (u.telegram_chat_id && u.telegram_chat_id !== chatId.toString()) {
+            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *OFFICIAL ADMIN ANNOUNCEMENT*\n\n${broadcastMsg}`).catch(() => {});
+            sentCount++;
+          }
+        }
+        return await sendSafeTelegramMessage(chatId, `📢 *BROADCAST COMPLETE:* Sent to ${sentCount} active designers.`);
+      }
+
+      if (text === '✏️ Edit Hub' || text === '/edithub') {
+        const editGuide = `✏️ *SUPER ADMIN EDIT & MANAGEMENT HUB*\n\n` +
+          `Aap chat me type karke kisi bhi cheez ko edit kar sakte hain:\n\n` +
+          `📅 *CALENDAR MANAGEMENT:*\n` +
+          `• \`/addevent Name | MM-DD | Category | Score\`\n` +
+          `• \`/delevent Event Name\`\n\n` +
+          `💼 *CLIENT BRAND PROFILES:*\n` +
+          `• \`/addclient Name | Industry | Tone | Style\`\n\n` +
+          `👥 *USER & ACCESS CONTROLS:*\n` +
+          `• \`/approve CHAT_ID\` — Approve pending user\n` +
+          `• \`/revoke CHAT_ID\` — Revoke user access\n` +
+          `• \`/makeadmin CHAT_ID\` — Promote to Admin\n\n` +
+          `📢 *BROADCAST ALERT:*\n` +
+          `• \`/broadcast Your announcement message\``;
+        return await sendSafeTelegramMessage(chatId, editGuide);
+      }
+
       if (text === '🚀 Trigger Radar Scan') {
         await sendSafeTelegramMessage(chatId, `🚀 *[Admin Trigger]* Executing morning calendar radar scan & AI briefings...`);
         const todayEvt = db.prepare('SELECT * FROM events ORDER BY importance DESC LIMIT 1').get();
