@@ -83,8 +83,16 @@ const db = {
         if (sql.includes('COUNT(*)')) {
           if (sql.includes('FROM users')) return { count: memCache.users.size || 1 };
           if (sql.includes('FROM events')) return { count: memCache.events.size || 20 };
+          if (sql.includes('FROM clients')) return { count: memCache.clients.size || 2 };
           if (sql.includes('FROM alerts')) return { count: memCache.alerts.size || 0 };
           if (sql.includes('FROM creative_ideas')) return { count: memCache.creative_ideas.size || 0 };
+          if (sql.includes('FROM feedback')) return { count: 0 };
+          if (sql.includes('FROM agent_logs')) return { count: 1 };
+          return { count: 0 };
+        }
+
+        if (sql.includes('FROM agent_logs')) {
+          return { id: 1, run_time: new Date().toISOString(), duration_ms: 320, status: 'SUCCESS' };
         }
 
         return null;
