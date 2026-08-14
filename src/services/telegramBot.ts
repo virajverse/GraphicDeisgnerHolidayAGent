@@ -50,12 +50,21 @@ function checkUserCooldown(chatId: string | number): { allowed: boolean; remaini
 // Keyboards
 export const DESIGNER_KEYBOARD = {
   keyboard: [
-    [{ text: '⚡ Auto Radar Brief' }, { text: '📅 Upcoming Dates' }],
+    [{ text: '⚡ Auto Radar Brief' }, { text: '🗓️ Full Calendar' }],
     [{ text: '💡 Custom Prompt' }, { text: '💼 Client Profiles' }],
-    [{ text: '👤 My Activity' }, { text: '📖 Designer Guide' }]
+    [{ text: '🌐 Language / भाषा' }, { text: '👤 My Activity' }]
   ],
   resize_keyboard: true,
   is_persistent: true
+};
+
+export const LANGUAGE_INLINE_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '🇬🇧 English (Global)', callback_data: 'lang_english' },
+      { text: '🇮🇳 Hinglish (Desi / India)', callback_data: 'lang_hinglish' }
+    ]
+  ]
 };
 
 export const ADMIN_MASTER_KEYBOARD = {
@@ -351,17 +360,52 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
   }
 }
 
-export function handleUpcomingCommand(): string {
-  const events: EventRecord[] = db.prepare('SELECT * FROM events ORDER BY date ASC LIMIT 10').all();
-  let text = `📅 *Upcoming Creative Calendar Opportunities:*\n\n`;
+export function getFullCalendarInlineKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🇮🇳 National Holidays', callback_data: 'cal_national' },
+        { text: '🪔 Festivals & Culture', callback_data: 'cal_festival' }
+      ],
+      [
+        { text: '🌍 Global Marketing Days', callback_data: 'cal_global' },
+        { text: '💼 Business & Startups', callback_data: 'cal_business' }
+      ],
+      [
+        { text: '📋 View All Events', callback_data: 'cal_all' }
+      ]
+    ]
+  };
+}
 
-  events.forEach(evt => {
+export function handleFullCalendarCommand(category = 'ALL'): string {
+  let events: EventRecord[] = [];
+  if (category === 'NATIONAL') {
+    events = db.prepare("SELECT * FROM events WHERE category = 'NATIONAL' OR country = 'India' ORDER BY date ASC").all();
+  } else if (category === 'FESTIVAL') {
+    events = db.prepare("SELECT * FROM events WHERE category = 'FESTIVAL' OR category = 'CULTURAL' ORDER BY date ASC").all();
+  } else if (category === 'GLOBAL') {
+    events = db.prepare("SELECT * FROM events WHERE category = 'GLOBAL' OR category = 'AWARENESS' ORDER BY date ASC").all();
+  } else if (category === 'BUSINESS') {
+    events = db.prepare("SELECT * FROM events WHERE category = 'BUSINESS' OR category = 'TECH' ORDER BY date ASC").all();
+  } else {
+    events = db.prepare("SELECT * FROM events ORDER BY date ASC LIMIT 20").all();
+  }
+
+  let title = category === 'ALL' ? 'FULL MARKETING & FESTIVAL CALENDAR' : `${category} CALENDAR`;
+  let text = `🗓️ *${title}*\n\n`;
+
+  events.forEach((evt, i) => {
     const flag = evt.country === 'India' ? '🇮🇳' : '🌍';
-    text += `${flag} *${evt.name}* — ${evt.date} (${evt.category})\n`;
+    text += `${i + 1}. ${flag} *${evt.name}* — \`${evt.date}\` [${evt.category}]\n`;
   });
 
-  text += `\n💬 *Tap any event button below to generate 6 concepts instantly!*`;
+  text += `\n💡 *Tip:* Chat me kisi bhi festival ka naam likhein ya niche categories browse karein!`;
   return text;
+}
+
+export function handleUpcomingCommand(): string {
+  return handleFullCalendarCommand('ALL');
 }
 
 export async function handleTodayCommand(): Promise<string> {
@@ -493,10 +537,25 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(targetChatId, welcomeApproved, { reply_markup: DESIGNER_KEYBOARD });
     }
 
-    if (data.startsWith('admin_rej_')) {
-      const targetChatId = data.replace('admin_rej_', '');
-      await botInstance.answerCallbackQuery(query.id, { text: `❌ Request Rejected.` }).catch(() => {});
-      return await sendSafeTelegramMessage(targetChatId, `⚠️ *Verification Update:* Aapka screenshot verify nahi ho paya. Please check karein ki aapne sahi handle follow kiya hai ya Admin *${ADMIN_HANDLE}* se contact karein.`);
+    // Language Switcher Callbacks
+    if (data === 'lang_english') {
+      db.prepare("UPDATE users SET language = 'ENGLISH' WHERE telegram_chat_id = ?").run(chatId.toString());
+      await botInstance.answerCallbackQuery(query.id, { text: 'Language set to English 🇬🇧' }).catch(() => {});
+      return await sendSafeTelegramMessage(chatId, `🇬🇧 *Language Preference: ENGLISH*\n\nAll your future design briefs, concepts, headlines, and strategic advice will now be delivered in modern global English!\n\nUse the buttons below or type any prompt:`, { reply_markup: DESIGNER_KEYBOARD });
+    }
+
+    if (data === 'lang_hinglish') {
+      db.prepare("UPDATE users SET language = 'HINGLISH' WHERE telegram_chat_id = ?").run(chatId.toString());
+      await botInstance.answerCallbackQuery(query.id, { text: 'Bhasha set to Hinglish 🇮🇳' }).catch(() => {});
+      return await sendSafeTelegramMessage(chatId, `🇮🇳 *Bhasha Preference: HINGLISH*\n\nAb aapke saare design briefs, creative concepts aur advice natural Hinglish me milenge!\n\nNiche diye gaye buttons se shuru karein:`, { reply_markup: DESIGNER_KEYBOARD });
+    }
+
+    // Full Calendar Category Callbacks
+    if (data.startsWith('cal_')) {
+      const catKey = data.replace('cal_', '').toUpperCase();
+      await botInstance.answerCallbackQuery(query.id, { text: `🗓️ Loading ${catKey} Calendar...` }).catch(() => {});
+      const calText = handleFullCalendarCommand(catKey);
+      return await sendSafeTelegramMessage(chatId, calText, { reply_markup: getFullCalendarInlineKeyboard() });
     }
 
     if (data === 'menu_today') {
@@ -1048,10 +1107,20 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, helpMsg);
     }
 
-    if (text === '/upcoming' || text === '📅 Upcoming Dates') {
-      const upcomingList = handleUpcomingCommand();
-      return await sendSafeTelegramMessage(chatId, upcomingList, {
-        reply_markup: getUpcomingInlineKeyboard()
+    if (text === '/calendar' || text === '🗓️ Full Calendar' || text === '/upcoming' || text === '📅 Upcoming Dates') {
+      const calText = handleFullCalendarCommand('ALL');
+      return await sendSafeTelegramMessage(chatId, calText, {
+        reply_markup: getFullCalendarInlineKeyboard()
+      });
+    }
+
+    if (text === '/language' || text === '🌐 Language / भाषा') {
+      const currentLang = auth.user?.language || 'HINGLISH';
+      const langPrompt = `🌐 *LANGUAGE PREFERENCE / भाषा सेटिंग्स*\n\n` +
+        `Current Setting: *${currentLang === 'ENGLISH' ? '🇬🇧 English (Global)' : '🇮🇳 Hinglish (Desi / India)'}*\n\n` +
+        `Choose your preferred briefing & conversational language:`;
+      return await sendSafeTelegramMessage(chatId, langPrompt, {
+        reply_markup: LANGUAGE_INLINE_KEYBOARD
       });
     }
 
@@ -1063,13 +1132,18 @@ export async function handleTelegramWebhookUpdate(update: any) {
         category: 'NATIONAL',
         importance: 95
       };
-      await sendSafeTelegramMessage(chatId, `🎯 *[AHEAD-OF-TIME AUTO RADAR]*\n\nHey ${auth.user?.name || 'Designer'}! Next 2-3 dino me *${topEvt.name}* aa raha hai. Apne clients ke liye yeh design bana lo!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`);
+      const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
+      const alertNotice = isEnglish
+        ? `🎯 *[AHEAD-OF-TIME RADAR BRIEF]*\n\nHey ${auth.user?.name || 'Designer'}! Upcoming in the next 2-3 days: *${topEvt.name}*. Get your client campaigns ready!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`
+        : `🎯 *[AHEAD-OF-TIME AUTO RADAR]*\n\nHey ${auth.user?.name || 'Designer'}! Next 2-3 dino me *${topEvt.name}* aa raha hai. Apne clients ke liye yeh design bana lo!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`;
+      
+      await sendSafeTelegramMessage(chatId, alertNotice);
       return await processAgentDesignRequest(chatId, topEvt.name, auth.user);
     }
 
     if (text === '💡 Custom Prompt' || text === '💡 Generate Ideas') {
       return await sendSafeTelegramMessage(chatId, `💡 *Aapko kiske liye design ideas chahiye?*\n\nNiche se koi upcoming event choose karein ya chat me apna custom prompt likhein:`, {
-        reply_markup: getUpcomingInlineKeyboard()
+        reply_markup: getFullCalendarInlineKeyboard()
       });
     }
 
@@ -1086,6 +1160,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const userClients = db.prepare('SELECT COUNT(*) as count FROM clients WHERE user_id = ?').get(auth.user?.id || 'default_user')?.count || 0;
       const userSaved = db.prepare('SELECT COUNT(*) as count FROM feedback WHERE user_id = ? AND rating = "SAVED"').get(auth.user?.id || 'default_user')?.count || 0;
       const activityText = `👤 *Hey ${auth.user?.name || 'Designer'}! Here is YOUR Private Work Summary:*\n\n` +
+        `• *Preferred Language:* ${auth.user?.language || 'HINGLISH'}\n` +
         `• *Your Private Client Profiles:* ${userClients} Active Brands\n` +
         `• *Your Saved Briefings:* ${userSaved} Concepts Bookmarked\n` +
         `• *Privacy Isolation:* 100% Private (Your work & ideas are never mixed with other designers)\n\n` +
@@ -1101,7 +1176,8 @@ export async function handleTelegramWebhookUpdate(update: any) {
     }
 
     const userName = auth.user ? auth.user.name : 'Designer';
-    const systemPrompt = buildFrontDispatcherSystemPrompt(userName);
+    const userLanguage = auth.user?.language || 'HINGLISH';
+    const systemPrompt = buildFrontDispatcherSystemPrompt(userName, userLanguage);
 
     try {
       const result = await executeClusterQuery(
