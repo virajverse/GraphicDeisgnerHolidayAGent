@@ -7,30 +7,41 @@ import { formatTelegramAlertMessage } from './telegramBot.js';
 import { EventRecord, UserRecord, ClientRecord } from '../types/database.js';
 
 /**
- * Scheduler Engine (TypeScript)
- * Periodically checks for upcoming events, scores relevance, synthesizes context,
- * generates 6 creative ideas, and issues alerts.
+ * Ahead-of-Time Strategic Scheduler Engine (TypeScript)
+ * Periodically checks for upcoming festivals/events (T-2 to T-3 Days in advance),
+ * synthesizes real-world context, generates 6 creative concepts, and dispatches
+ * automated morning briefings to all active designers at 8:00 AM IST.
  */
 
 export function initScheduler(telegramBot: any = null) {
-  console.log('[Scheduler] Initializing T-2 Daily Event Scheduler...');
+  console.log('[Scheduler] Initializing T-2 Daily Event Scheduler (Timezone: Asia/Kolkata)...');
 
-  // Daily cron job running at 08:00 AM
+  // Daily cron job running at 08:00 AM IST (Indian Standard Time)
   cron.schedule('0 8 * * *', async () => {
-    console.log('[Scheduler] Running daily scheduled event scan at 08:00 AM...');
+    console.log('[Scheduler] ⏰ Running daily scheduled morning radar scan at 08:00 AM IST...');
     await runEventCheckAndAlert(telegramBot);
+  }, {
+    timezone: 'Asia/Kolkata'
   });
 }
 
 export async function runEventCheckAndAlert(telegramBot: any = null, forcedEventId: string | null = null) {
   const startTime = Date.now();
-  console.log('[Scheduler] Executing event scan & briefing engine...');
+  console.log('[Scheduler] 🚀 Executing ahead-of-time event scan & briefing engine...');
 
-  const user: UserRecord = db.prepare("SELECT * FROM users WHERE id = 'default_user'").get();
-  const clients: ClientRecord[] = db.prepare("SELECT * FROM clients WHERE user_id = 'default_user'").all();
+  const activeUsers: UserRecord[] = db.prepare("SELECT * FROM users WHERE is_approved = 1").all();
+  if (activeUsers.length === 0) {
+    activeUsers.push(db.prepare("SELECT * FROM users WHERE id = 'default_user'").get() || {
+      id: 'default_user',
+      name: 'Designer',
+      telegram_chat_id: '1634951702',
+      is_approved: 1,
+      role: 'ADMIN'
+    });
+  }
 
   const today = new Date();
-  const leadDays = user ? user.notification_lead_days || 2 : 2;
+  const leadDays = 2; // T-2 Days ahead of time standard
 
   const targetDateObj = new Date(today);
   targetDateObj.setDate(today.getDate() + leadDays);
@@ -38,7 +49,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
   const dayStr = String(targetDateObj.getDate()).padStart(2, '0');
   const targetDateMMDD = `${monthStr}-${dayStr}`;
 
-  console.log(`[Scheduler] Scanning events matching date: ${targetDateMMDD} (T-${leadDays} days)...`);
+  console.log(`[Scheduler] 📅 Scanning opportunities matching date: ${targetDateMMDD} (T-${leadDays} days lead time)...`);
 
   let targetEvents: EventRecord[] = [];
   if (forcedEventId) {
@@ -46,7 +57,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
   } else {
     targetEvents = db.prepare('SELECT * FROM events WHERE date = ? AND is_active = 1').all(targetDateMMDD);
     if (targetEvents.length === 0) {
-      console.log('[Scheduler] No exact date match for today. Picking top upcoming event for briefing demo.');
+      console.log('[Scheduler] No exact date match for today. Picking top upcoming high-priority event.');
       targetEvents = db.prepare('SELECT * FROM events WHERE is_active = 1 ORDER BY importance DESC LIMIT 1').all();
     }
   }
@@ -55,19 +66,14 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
   const processedAlerts: any[] = [];
 
   for (const event of targetEvents) {
+    const clients: ClientRecord[] = db.prepare("SELECT * FROM clients").all();
     const client = clients.length > 0 ? clients[0] : null;
-    const scoreEval = calculateEventScore(event, user, client);
-
-    if (!scoreEval.shouldAlert) {
-      console.log(`[Scheduler] Skipping event "${event.name}" (Score: ${scoreEval.score} < Threshold: ${scoreEval.threshold})`);
-      continue;
-    }
 
     const todayISO = new Date().toISOString().split('T')[0];
     const existingAlert = db.prepare('SELECT id FROM alerts WHERE event_id = ? AND trigger_date = ?').get(event.id, todayISO);
 
     if (existingAlert && !forcedEventId) {
-      console.log(`[Scheduler] Anti-spam trigger: Alert for "${event.name}" already generated today. Skipping duplicate.`);
+      console.log(`[Scheduler] Anti-spam trigger: Briefing for "${event.name}" already generated today. Skipping duplicate.`);
       continue;
     }
 
@@ -75,7 +81,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
     const ideation = await generateCreativeIdeas({
       event,
       context,
-      userProfile: user,
+      userProfile: activeUsers[0],
       clientProfile: client
     });
 
@@ -85,11 +91,11 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
       alertId,
-      user.id,
+      activeUsers[0].id,
       event.id,
       client ? client.id : null,
       todayISO,
-      scoreEval.score,
+      event.importance || 85,
       context.summary,
       JSON.stringify(context.sources || []),
       JSON.stringify(ideation.recommendation),
@@ -107,7 +113,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
         ideaId,
         alertId,
         event.id,
-        user.id,
+        activeUsers[0].id,
         client ? client.id : null,
         idea.category,
         idea.title,
@@ -122,26 +128,40 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
       );
     });
 
-    const formattedMsg = formatTelegramAlertMessage(event, { eventId: event.id, relevanceScore: scoreEval.score }, context, ideation);
+    const formattedMsg = formatTelegramAlertMessage(event, { eventId: event.id, relevanceScore: event.importance || 85 }, context, ideation);
 
-    if (telegramBot && user.telegram_chat_id && user.telegram_chat_id !== 'demo_chat_123') {
-      try {
-        await telegramBot.sendMessage(user.telegram_chat_id, formattedMsg, { parse_mode: 'Markdown' });
-        db.prepare("UPDATE alerts SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(alertId);
-        alertsSentCount++;
-      } catch (err: any) {
-        console.error(`[Scheduler] Telegram dispatch error: ${err.message}`);
-        db.prepare("UPDATE alerts SET status = 'FAILED' WHERE id = ?").run(alertId);
+    // Multi-User Dispatch to All Approved Designers
+    for (const u of activeUsers) {
+      if (telegramBot && u.telegram_chat_id && u.telegram_chat_id !== 'demo_chat_123') {
+        try {
+          await telegramBot.sendMessage(u.telegram_chat_id, `🌅 *[MORNING RADAR BRIEF]*\n\n${formattedMsg}`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '🎨 Visual Specs (Colors & Fonts)', callback_data: `specs_${event.id}` },
+                  { text: '⭐ Save Briefing', callback_data: `fb_save_${event.id}` }
+                ],
+                [
+                  { text: '🔄 New Ideas', callback_data: `gen_evt_${event.name}` },
+                  { text: '👍 Useful', callback_data: `fb_like_${event.id}` },
+                  { text: '👎 Dislike', callback_data: `fb_dislike_${event.id}` }
+                ]
+              ]
+            }
+          });
+          alertsSentCount++;
+        } catch (err: any) {
+          console.warn(`[Scheduler] Dispatch error for user ${u.telegram_chat_id}: ${err.message}`);
+        }
       }
-    } else {
-      db.prepare("UPDATE alerts SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(alertId);
-      alertsSentCount++;
     }
+
+    db.prepare("UPDATE alerts SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(alertId);
 
     processedAlerts.push({
       alertId,
       event,
-      scoreEval,
       context,
       ideation,
       formattedMessage: formattedMsg
@@ -159,10 +179,10 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
     alertsSentCount,
     durationMs,
     'SUCCESS',
-    `Checked ${targetEvents.length} events, generated ${processedAlerts.length} briefs in ${durationMs}ms.`
+    `Checked ${targetEvents.length} events, dispatched to ${activeUsers.length} active designers in ${durationMs}ms.`
   );
 
-  console.log(`[Scheduler] Scan complete in ${durationMs}ms. ${alertsSentCount} alerts generated.`);
+  console.log(`[Scheduler] Scan complete in ${durationMs}ms. ${alertsSentCount} briefings delivered.`);
   return {
     eventsChecked: targetEvents.length,
     alertsGenerated: processedAlerts.length,

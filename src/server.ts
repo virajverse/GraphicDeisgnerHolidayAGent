@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import db, { initDatabase } from './db/database.js';
 import { initTelegramBot, handleUpcomingCommand, handleTodayCommand, handleOnDemandIdeas, handleTelegramWebhookUpdate } from './services/telegramBot.js';
-import { initScheduler } from './services/scheduler.js';
+import { initScheduler, runEventCheckAndAlert } from './services/scheduler.js';
 import fileDirName from './utils/fileDir.js';
 import { executeMultiSourceScrape } from './services/webScraperEngine.js';
 import { EventRecord, ClientRecord, AlertRecord, CreativeIdeaRecord } from './types/database.js';
@@ -104,6 +104,17 @@ app.post(['/api/events', '/events'], (req: Request, res: Response) => {
   `).run(id, name, description || '', date, country || 'India', category || 'BUSINESS', parseInt(importance || 80), 'Manual Input');
 
   res.json({ success: true, id, message: 'Custom event added successfully.' });
+});
+
+// Trigger Ahead-of-Time Radar Scan (Vercel Cron at 08:00 AM IST & Admin UI)
+app.all(['/api/alerts/trigger', '/alerts/trigger'], async (req: Request, res: Response) => {
+  try {
+    const forcedId = (req.query.event_id as string) || (req.body?.event_id as string) || null;
+    const result = await runEventCheckAndAlert(telegramBot, forcedId);
+    res.json({ success: true, message: 'Ahead-of-time morning radar scan executed successfully.', result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Get Alerts / Generated Briefings
