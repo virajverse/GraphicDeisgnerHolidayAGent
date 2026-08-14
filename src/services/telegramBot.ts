@@ -163,33 +163,32 @@ export function formatTelegramAlertMessage(
 ): string {
   const { ideas, recommendation } = ideation;
 
-  let msg = `🚨 *TALIYO CREATIVE ALERT | DESIGN OPPORTUNITY*\n\n`;
-  msg += `📅 *Event:* ${event.name} (${event.date})\n`;
-  msg += `📊 *Relevance Score:* \`${alert.relevanceScore}/100\`\n\n`;
+  let msg = `✨ *CREATIVE OPPORTUNITY BRIEFING*\n\n`;
+  msg += `📅 *Occasion:* ${event.name} (${event.date})\n\n`;
 
-  msg += `🌐 *REAL-WORLD CONTEXT & ANGLE:*\n`;
-  msg += `_${context.summary}_\n`;
-  msg += `💡 *Designer Opportunity:* ${context.opportunityHint}\n\n`;
+  msg += `🌐 *WHAT'S HAPPENING IN THE REAL WORLD:*\n`;
+  msg += `_${context.summary}_\n\n`;
+  msg += `💡 *Creative Angle for Designers:*\n${context.opportunityHint}\n\n`;
 
-  msg += `🎨 *6 STRATEGIC CREATIVE CONCEPTS:*\n`;
-  msg += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  msg += `🎨 *6 READY-TO-DESIGN CONCEPTS:*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   ideas.forEach((idea, idx) => {
     const num = idx + 1;
-    const catUpper = (idea.category || 'IDEA').toUpperCase();
-    msg += `*#0${num} [${catUpper}]* ➔ *${idea.title}*\n`;
+    const cat = idea.category || 'Concept';
+    msg += `*#0${num} [${cat.toUpperCase()}]* ➔ *${idea.title}*\n`;
     msg += `• *Concept:* ${idea.concept}\n`;
     msg += `• *Visual Direction:* ${idea.visual_direction}\n`;
-    msg += `• *Headline:* "${idea.headline}"\n`;
-    msg += `• *Platform:* ${idea.platform} | *Level:* ${idea.difficulty || 'Medium'}\n\n`;
+    msg += `• *Headline:* _"${idea.headline}"_\n`;
+    msg += `• *Best Format:* ${idea.platform}\n\n`;
   });
 
-  msg += `⭐ *BEST STRATEGIC RECOMMENDATION:*\n`;
+  msg += `⭐ *TOP STRATEGIC RECOMMENDATION:*\n`;
   const recNums = recommendation.recommended_ids ? recommendation.recommended_ids.map(i => `#0${i}`).join(' & ') : '#01 & #04';
-  msg += `${recNums} — ${recommendation.avoid_note || 'Strongest ROI for current context.'}\n\n`;
+  msg += `${recNums} — ${recommendation.avoid_note || 'Strongest engagement potential.'}\n\n`;
 
   msg += `📱 *Target Platforms:* ${recommendation.recommended_platforms || 'Instagram Carousel + LinkedIn'}\n`;
-  msg += `🎯 *Target Audience:* ${recommendation.target_audience || 'General / Corporate / B2B'}\n`;
+  msg += `🎯 *Target Audience:* ${recommendation.target_audience || 'General / Modern Digital Audience'}\n`;
 
   return msg;
 }
@@ -276,7 +275,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
 
   const progressMsg = await botInstance.sendMessage(
     chatId,
-    `📡 *[Step 1/3]* 🌐 _Scraping live web news & official government calendar for "${queryText}"..._`,
+    `🔍 _Analyzing real-world marketing trends for "${queryText}"..._`,
     { parse_mode: 'Markdown' }
   );
 
@@ -296,17 +295,11 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
     const client: ClientRecord = db.prepare("SELECT * FROM clients WHERE user_id = ? OR user_id = 'default_user' LIMIT 1").get(userProfile.id);
 
     await botInstance.editMessageText(
-      `🧠 *[Step 2/3]* ⚡ _Synthesizing real-world context with NVIDIA Cloud (openai/gpt-oss-120b)..._`,
+      `🎨 _Crafting 6 strategic design concepts, headlines & color palettes..._`,
       { chat_id: chatId, message_id: progressMsg.message_id, parse_mode: 'Markdown' }
     ).catch(() => {});
 
     const context = await fetchRealWorldContext(event);
-
-    await botInstance.editMessageText(
-      `🎨 *[Step 3/3]* 🖌️ _Crafting 6 Category Briefings, Color Specs & Strategic Recommendation..._`,
-      { chat_id: chatId, message_id: progressMsg.message_id, parse_mode: 'Markdown' }
-    ).catch(() => {});
-
     const ideation = await generateCreativeIdeas({ event, context, userProfile, clientProfile: client });
 
     const alertData = {
@@ -338,7 +331,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
     });
 
   } catch (err: any) {
-    await botInstance.editMessageText(`⚠️ *Agent Processing Error:* ${err.message}`, {
+    await botInstance.editMessageText(`⚠️ *Agent Note:* Please try asking your creative prompt again.`, {
       chat_id: chatId,
       message_id: progressMsg.message_id,
       parse_mode: 'Markdown'
