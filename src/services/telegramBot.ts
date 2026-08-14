@@ -615,7 +615,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const instaProfile = await scrapeInstagramProfile(targetHandle);
       let profileBadge = '';
       if (instaProfile) {
-        profileBadge = `\n🔍 *Instagram Profile:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (${instaProfile.followerCount.toLocaleString()} Followers)\n`;
+        profileBadge = `\n🔍 *Instagram:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (Verified Account)\n`;
       }
 
       // Check if Instagram profile was successfully verified by our live Scraper
@@ -642,7 +642,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         if (MASTER_ADMIN_CHAT_ID && botInstance) {
           const adminNotice = `⚡ *[AI AUTO-APPROVED]* New Designer Verified!\n\n` +
             `• *Name:* ${name}\n` +
-            `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle}) (${instaProfile?.followerCount.toLocaleString()} followers)\n` +
+            `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
             `• *YouTube Channel:* ${ytChannel}\n` +
             `• *Chat ID:* \`${chatId}\`\n\n` +
             `🟢 *Status:* Automatically approved & activated in 0ms!`;
