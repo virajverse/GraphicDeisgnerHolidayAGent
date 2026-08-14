@@ -26,6 +26,9 @@ const activeProcessingUsers = new Set<string>();
 // Anti-Brute Force Passcode Tracker
 const bruteForceTracker = new Map<string, { attempts: number; lockedUntil: number }>();
 
+// Smart Onboarding & Screenshot Verification Tracker
+const onboardingTracker = new Map<string, { step: 'WAITING_NAME' | 'WAITING_SCREENSHOT'; name?: string; handle?: string }>();
+
 function checkUserCooldown(chatId: string | number): { allowed: boolean; remainingSec: number } {
   const strId = chatId.toString();
   const now = Date.now();
@@ -60,6 +63,18 @@ export const ADMIN_MASTER_KEYBOARD = {
   ],
   resize_keyboard: true,
   is_persistent: true
+};
+
+export const GATEWAY_INLINE_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '🔑 Direct Passcode Login', callback_data: 'gate_login' },
+      { text: '📝 Free Registration', callback_data: 'gate_register' }
+    ],
+    [
+      { text: '💬 Contact Admin', callback_data: 'menu_contact' }
+    ]
+  ]
 };
 
 export function getUpcomingInlineKeyboard() {
@@ -122,6 +137,21 @@ export async function sendSafeTelegramMessage(chatId: string | number, text: str
     }
     throw err;
   }
+}
+
+export async function sendAccessGatewayCard(chatId: string | number) {
+  const gatewayMsg = `🔒 *TALIYO CREATIVE INTELLIGENCE | ACCESS GATEWAY*\n\n` +
+    `Namaste Designer! Main aapka **Senior Graphic Design Strategy & Ahead-of-Time Trend AI Partner** hoon.\n\n` +
+    `⚡ *Aapko kya milta hai:*\n` +
+    `• Ahead-of-Time Festival & Holiday Radar Alerts (T-2 Days in advance)\n` +
+    `• Real-World Scraped News & Cultural Trend Context\n` +
+    `• 6 Ready-to-Design Concept Angles per event (Educational, 3D, Emotional)\n` +
+    `• Instant Hex Color Palettes & Font Pairings for Figma/Photoshop\n\n` +
+    `👇 *Access ke liye niche se ek option select karein:*`;
+  
+  return await sendSafeTelegramMessage(chatId, gatewayMsg, {
+    reply_markup: GATEWAY_INLINE_KEYBOARD
+  });
 }
 
 export function formatTelegramAlertMessage(
@@ -397,6 +427,47 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }).catch(() => {});
     }
 
+    // Access Gateway Buttons
+    if (data === 'gate_login') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🔑 Direct Passcode Login' }).catch(() => {});
+      const loginGuide = `🔑 *DIRECT PASSCODE LOGIN*\n\nAapke paas official invite passcode hai toh chat me type karein:\n\n\`/register YOUR_PASSCODE\`\n\n*(Example: \`/register TALIYO2026\`)*`;
+      return await sendSafeTelegramMessage(chatId, loginGuide);
+    }
+
+    if (data === 'gate_register') {
+      await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => {});
+      onboardingTracker.set(chatId.toString(), { step: 'WAITING_NAME' });
+      const regStep1 = `📝 *FREE DESIGNER REGISTRATION (STEP 1/2)*\n\n` +
+        `Aapka swagat hai! Please apna **Full Name aur Instagram Handle ya Portfolio Link** yahan chat me type karke bhejiye:\n\n` +
+        `*(Example: Rahul Sharma - @rahul_graphics)*`;
+      return await sendSafeTelegramMessage(chatId, regStep1);
+    }
+
+    // Admin Verification Actions: Approve or Reject
+    if (data.startsWith('admin_appr_')) {
+      const targetChatId = data.replace('admin_appr_', '');
+      db.prepare(`
+        INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status)
+        VALUES (?, 'Approved Designer', '', ?, 1, 'DESIGNER', 'APPROVED')
+        ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED'
+      `).run(`user_${targetChatId}`, targetChatId);
+
+      await botInstance.answerCallbackQuery(query.id, { text: `✅ Designer ${targetChatId} Approved!` }).catch(() => {});
+      await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, `🎉 *DESIGNER APPROVED:*\nUser ID \`${targetChatId}\` ko full active access grant kar diya gaya hai.`);
+
+      const welcomeApproved = `🎉 *CONGRATULATIONS! YOUR DESIGNER ACCESS IS APPROVED!*\n\n` +
+        `Admin *@virajverse* ne aapka account verify aur approve kar diya hai!\n\n` +
+        `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active hai!*\n` +
+        `Niche diye gaye buttons se shuru karein ya direct prompt bhejein:`;
+      return await sendSafeTelegramMessage(targetChatId, welcomeApproved, { reply_markup: DESIGNER_KEYBOARD });
+    }
+
+    if (data.startsWith('admin_rej_')) {
+      const targetChatId = data.replace('admin_rej_', '');
+      await botInstance.answerCallbackQuery(query.id, { text: `❌ Request Rejected.` }).catch(() => {});
+      return await sendSafeTelegramMessage(targetChatId, `⚠️ *Verification Update:* Aapka screenshot verify nahi ho paya. Please check karein ki aapne sahi handle follow kiya hai ya Admin *${ADMIN_HANDLE}* se contact karein.`);
+    }
+
     if (data === 'menu_today') {
       await botInstance.answerCallbackQuery(query.id, { text: '⚡ Loading Today\'s Focus...' }).catch(() => {});
       const response = await handleTodayCommand();
@@ -468,11 +539,79 @@ export async function handleTelegramWebhookUpdate(update: any) {
     return;
   }
 
-  // 2. Handle Message Updates
+  // 2. Handle Photo Messages (Screenshot Verification Proof Upload)
+  if (update.message && update.message.photo) {
+    const msg: TelegramBot.Message = update.message;
+    const chatId = msg.chat.id.toString();
+    const photos = msg.photo;
+    if (!photos || photos.length === 0) return;
+    const bestPhoto = photos[photos.length - 1]; // highest resolution photo
+
+    const obState = onboardingTracker.get(chatId);
+    const applicantName = obState?.name || msg.from?.first_name || 'New Designer';
+    const applicantHandle = obState?.handle || (msg.from?.username ? `@${msg.from.username}` : 'n/a');
+
+    // Save pending record in Turso DB
+    db.prepare(`
+      INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, verification_screenshot_id)
+      VALUES (?, ?, ?, ?, 0, 'DESIGNER', 'PENDING', ?)
+      ON CONFLICT(id) DO UPDATE SET verification_status='PENDING', verification_screenshot_id=?
+    `).run(`user_${chatId}`, applicantName, msg.from?.username || '', chatId, bestPhoto.file_id, bestPhoto.file_id);
+
+    // Confirm to user
+    const receivedAck = `✅ *SCREENSHOT RECEIVED FOR VERIFICATION!*\n\n` +
+      `Thank you *${applicantName}*! Aapka verification request Admin *@virajverse* ko review ke liye bhej diya gaya hai.\n\n` +
+      `⏳ *Status:* Review in progress. Jaise hi approve hoga, aapka full AI Agent access activate ho jayega!`;
+    await sendSafeTelegramMessage(chatId, receivedAck);
+
+    // Forward Photo Proof to Master Admin with 1-Click Action Buttons
+    if (MASTER_ADMIN_CHAT_ID && botInstance) {
+      const adminCaption = `🔔 *NEW DESIGNER VERIFICATION REQUEST*\n\n` +
+        `• *Applicant:* ${applicantName}\n` +
+        `• *Handle / Info:* ${applicantHandle}\n` +
+        `• *Telegram User:* @${msg.from?.username || 'n/a'}\n` +
+        `• *Chat ID:* \`${chatId}\`\n\n` +
+        `👇 *Review screenshot & choose action:*`;
+
+      const adminVerifyButtons = {
+        inline_keyboard: [
+          [
+            { text: `✅ Approve Designer`, callback_data: `admin_appr_${chatId}` },
+            { text: `❌ Reject`, callback_data: `admin_rej_${chatId}` }
+          ]
+        ]
+      };
+
+      try {
+        await botInstance.sendPhoto(MASTER_ADMIN_CHAT_ID, bestPhoto.file_id, {
+          caption: adminCaption,
+          parse_mode: 'Markdown',
+          reply_markup: adminVerifyButtons
+        });
+      } catch (err: any) {
+        console.warn(`[Admin Photo Forward Error]: ${err.message}`);
+      }
+    }
+    return;
+  }
+
+  // 3. Handle Text Messages
   if (update.message && update.message.text) {
     const msg: TelegramBot.Message = update.message;
     const text = msg.text ? msg.text.trim() : '';
     const chatId = msg.chat.id;
+
+    // Check Onboarding State Machine (Step 1: Capturing Name & Handle)
+    const obState = onboardingTracker.get(chatId.toString());
+    if (obState && obState.step === 'WAITING_NAME' && !text.startsWith('/')) {
+      onboardingTracker.set(chatId.toString(), { step: 'WAITING_SCREENSHOT', name: text, handle: text });
+      const step2Msg = `🚀 *STEP 2/2: FAST-TRACK VERIFICATION & ACCESS!*\n\n` +
+        `Apne designer account ko **Fast Verify** karwane ke liye hamare official channels ko subscribe/follow karein:\n\n` +
+        `1️⃣ *Instagram:* https://instagram.com/virajverse\n` +
+        `2️⃣ *Telegram Channel:* https://t.me/virajverse\n\n` +
+        `📸 *Follow / Subscribe karne ke baad uska SCREENSHOT yahan chat me bhej dijiye!* Hamare Admin review karke turant aapka access activate karenge!`;
+      return await sendSafeTelegramMessage(chatId, step2Msg);
+    }
 
     // Check Authentication
     const auth = verifyUserAuth(msg);
@@ -497,9 +636,9 @@ export async function handleTelegramWebhookUpdate(update: any) {
       if (inputCode === ADMIN_CODE) {
         bruteForceTracker.delete(chatId.toString());
         db.prepare(`
-          INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role)
-          VALUES (?, ?, ?, ?, 1, 'DESIGNER')
-          ON CONFLICT(id) DO UPDATE SET is_approved=1
+          INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status)
+          VALUES (?, ?, ?, ?, 1, 'DESIGNER', 'APPROVED')
+          ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED'
         `).run(`user_${chatId}`, msg.from?.first_name || 'Designer', msg.from?.username || '', chatId.toString());
 
         const successMsg = `🎉 *ACCESS GRANTED! WELCOME TO TALIYO AGENT*\n\n` +
@@ -527,15 +666,9 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }
     }
 
-    // Unauthenticated user barrier
+    // Unauthenticated user barrier -> Send Access Gateway Card
     if (!auth.authorized) {
-      if (text.toLowerCase().includes('passcode') || text.toLowerCase().includes('admin') || text.toLowerCase().includes('code')) {
-        const infoMsg = `🔐 *ADMIN PASSCODE INFO*\n\n` +
-          `To get your Admin Passcode, please contact *${ADMIN_HANDLE}* on Telegram!\n\n` +
-          `Once you have the code, type:\n\`/register YOUR_PASSCODE\``;
-        return await sendSafeTelegramMessage(chatId, infoMsg);
-      }
-      return sendSafeTelegramMessage(chatId, `🔒 *ACCESS RESTRICTED*\n\nPlease enter your invite passcode using:\n\`/register YOUR_PASSCODE\`\n\nContact *${ADMIN_HANDLE}* for access.`);
+      return await sendAccessGatewayCard(chatId);
     }
 
     // Check Cooldown for rapid tapping / spamming
@@ -683,12 +816,6 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `• *Privacy Isolation:* 100% Private (Your work & ideas are never mixed with other designers)\n\n` +
         `💬 *Ask me any design prompt to generate your next creative briefing!*`;
       return await sendSafeTelegramMessage(chatId, activityText);
-    }
-
-    if (text === '💡 Generate Ideas') {
-      return await sendSafeTelegramMessage(chatId, `💡 *Which event or topic would you like design ideas for?*\n\nChoose an upcoming event or type your custom prompt in chat:`, {
-        reply_markup: getUpcomingInlineKeyboard()
-      });
     }
 
     // Conversational Intent Analysis & Frontline Multi-Agent Dispatcher
