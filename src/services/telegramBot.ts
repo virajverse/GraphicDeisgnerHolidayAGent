@@ -3,6 +3,8 @@ import TelegramBot from 'node-telegram-bot-api';
 import db from '../db/database.js';
 import { fetchRealWorldContext } from './contextEngine.js';
 import { generateCreativeIdeas } from './ideationEngine.js';
+import { executeClusterQuery, MODEL_CLUSTERS } from './clusterModelRouter.js';
+import { buildFrontDispatcherSystemPrompt } from '../prompts/systemPrompts.js';
 import { agentQueue } from './requestQueueEngine.js';
 import { pruneDatabaseCache } from './dbPruner.js';
 import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord } from '../types/database.js';
@@ -676,13 +678,46 @@ export async function handleTelegramWebhookUpdate(update: any) {
       });
     }
 
-    // Design Prompt or /ideas [Event]
+    // Conversational Intent Analysis & Frontline Multi-Agent Dispatcher
     let queryTopic = text;
     if (text.startsWith('/ideas')) {
       queryTopic = text.replace('/ideas', '').trim() || 'Independence Day India';
+      return await processAgentDesignRequest(chatId, queryTopic, auth.user);
     }
 
-    // Process design request
+    const userName = auth.user ? auth.user.name : 'Designer';
+    const systemPrompt = buildFrontDispatcherSystemPrompt(userName);
+
+    try {
+      const result = await executeClusterQuery(
+        MODEL_CLUSTERS.FRONT_DISPATCHER,
+        systemPrompt,
+        text,
+        { temperature: 0.5, response_format: { type: 'json_object' } }
+      );
+
+      let clean = result.text.trim();
+      if (clean.startsWith('```json')) clean = clean.replace(/^```json/, '').replace(/```$/, '').trim();
+      else if (clean.startsWith('```')) clean = clean.replace(/^```/, '').replace(/```$/, '').trim();
+
+      const parsed = JSON.parse(clean);
+
+      if (parsed.action === 'REPLY_DIRECTLY') {
+        return await sendSafeTelegramMessage(chatId, parsed.message);
+      }
+
+      if (parsed.action === 'TRIGGER_BRIEFING_PIPELINE') {
+        if (parsed.message) {
+          await sendSafeTelegramMessage(chatId, `💬 _${parsed.message}_`);
+        }
+        const cleanTopic = parsed.extractedParams?.cleanTopic || text;
+        return await processAgentDesignRequest(chatId, cleanTopic, auth.user);
+      }
+    } catch (err: any) {
+      console.warn(`[FrontDispatcher Fallback]: ${err.message}`);
+    }
+
+    // Direct design request fallback
     await processAgentDesignRequest(chatId, queryTopic, auth.user);
   }
 }
