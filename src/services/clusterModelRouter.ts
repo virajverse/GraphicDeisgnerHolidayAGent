@@ -22,6 +22,12 @@ export function getOpenAIClient(): OpenAI {
  * 27-Model Resilient Functional Pools
  */
 export const MODEL_CLUSTERS = {
+  FRONT_DISPATCHER: [
+    'meta/llama-3.1-8b-instruct',
+    'nvidia/nemotron-mini-4b-instruct',
+    'openai/gpt-oss-20b',
+    'minimaxai/minimax-m3'
+  ],
   SCOPE_GUARD: [
     'nvidia/llama-3.1-nemoguard-8b-topic-control',
     'minimaxai/minimax-m3',
