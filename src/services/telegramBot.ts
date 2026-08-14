@@ -51,8 +51,9 @@ function checkUserCooldown(chatId: string | number): { allowed: boolean; remaini
 export const DESIGNER_KEYBOARD = {
   keyboard: [
     [{ text: '⚡ Auto Radar Brief' }, { text: '🗓️ Full Calendar' }],
-    [{ text: '💡 Custom Prompt' }, { text: '💼 Client Profiles' }],
-    [{ text: '🌐 Language (EN/Hinglish)' }, { text: '👤 My Activity' }]
+    [{ text: '🎨 Art Director Co-Pilot' }, { text: '💼 Client Profiles' }],
+    [{ text: '💡 Custom Prompt' }, { text: '👤 My Activity' }],
+    [{ text: '🌐 Language (EN/Hinglish)' }, { text: '📖 Guide & Support' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -69,8 +70,9 @@ export const LANGUAGE_INLINE_KEYBOARD = {
 
 export const ADMIN_MASTER_KEYBOARD = {
   keyboard: [
-    [{ text: '👑 Admin Panel' }, { text: '👥 Active Designers' }],
+    [{ text: '👑 Admin Control' }, { text: '👥 Active Designers' }],
     [{ text: '🔔 Pending Approvals' }, { text: '🚀 Trigger Radar Scan' }],
+    [{ text: '📢 Broadcast Hub' }, { text: '👥 Community Ground' }],
     [{ text: '📥 Export DPO Dataset' }, { text: '📊 Deep AI Telemetry' }]
   ],
   resize_keyboard: true,
@@ -858,7 +860,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
     // 👑 SUPER ADMIN EXCLUSIVE COMMANDS
     if (auth.isAdmin) {
-      if (text === '👑 Admin Panel' || text === '/admin') {
+      if (text === '👑 Admin Control' || text === '👑 Admin Panel' || text === '/admin') {
         const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get()?.count || 1;
         const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;
         const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get()?.count || 0;
@@ -869,9 +871,41 @@ export async function handleTelegramWebhookUpdate(update: any) {
           `• *Generated Concepts:* ${ideasCount} Ideas\n` +
           `• *Cluster Engine:* 27-Model Resilient Cascade Active\n` +
           `• *Cloud DB:* Turso Cloud SQLite (AWS Mumbai)\n\n` +
+          `⚡ *Quick Admin Commands:*\n` +
+          `• \`/addevent Name | MM-DD | Category | Score\`\n` +
+          `• \`/addclient Name | Industry | Audience | Tone\`\n` +
+          `• \`/makeadmin CHAT_ID\`\n` +
+          `• \`/prunecache\`\n\n` +
           `👇 *Tap any admin button below to execute instant controls:*`;
         
         return await sendSafeTelegramMessage(chatId, adminPanelMsg, { reply_markup: ADMIN_MASTER_KEYBOARD });
+      }
+
+      if (text === '📢 Broadcast Hub' || text === '/broadcast') {
+        const broadcastHubMsg = `📢 *TALIYO MULTI-MEDIA BROADCAST HUB*\n\n` +
+          `Sabhi approved designers ko instant push broadcast bhejein:\n\n` +
+          `1️⃣ *Text Broadcast:*\n` +
+          `\`/broadcast Aapka Message\`\n\n` +
+          `2️⃣ *Photo + Action Button Broadcast:*\n` +
+          `\`/broadcastphoto PhotoURL | Caption | ButtonText | ButtonURL\`\n\n` +
+          `3️⃣ *Titled Link + Button Broadcast:*\n` +
+          `\`/broadcastlink Headline | Description | ButtonText | ButtonURL\``;
+        return await sendSafeTelegramMessage(chatId, broadcastHubMsg);
+      }
+
+      if (text === '👥 Community Ground' || text === '/ground') {
+        const setting = db.prepare("SELECT * FROM system_settings WHERE key = 'community_group'").get();
+        const currentLink = setting?.value || 'https://t.me/virajverse';
+        const isEnabled = setting?.is_enabled === 1;
+
+        const groundHubMsg = `👥 *DESIGNER COMMUNITY GROUND CONTROL*\n\n` +
+          `• *Current Link:* ${currentLink}\n` +
+          `• *Gate Status:* ${isEnabled ? '🟢 ACTIVE (Shown during onboarding)' : '🔴 DISABLED (Hidden)'}\n\n` +
+          `🛠️ *Available Commands:*\n` +
+          `• Link Set Karein: \`/setgroup https://t.me/yourgroup\`\n` +
+          `• On/Off Toggle: \`/togglegroup on\` ya \`/togglegroup off\`\n` +
+          `• Designers Ko Invite Bhejein: \`/notifygroup\``;
+        return await sendSafeTelegramMessage(chatId, groundHubMsg);
       }
 
       if (text === '👥 Active Designers') {
@@ -1161,12 +1195,43 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, contactMsg);
     }
 
-    if (text === '/help' || text === '📖 Designer Guide' || text === '📖 Full Designer Guide') {
-      const helpMsg = `📖 *Taliyo Design AI Agent Guide*\n\n` +
-        `1️⃣ *Instant Ideas:* Tap any button below or type any festival/prompt in chat.\n` +
-        `2️⃣ *Visual Specs:* Get exact Hex Colors & Font Pairings with 1 tap.\n` +
-        `3️⃣ *Client Isolation:* Every designer's brand guidelines stay private.`;
-      return await sendSafeTelegramMessage(chatId, helpMsg);
+    if (text === '🎨 Art Director Co-Pilot' || text === '/copilot') {
+      const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
+      const copilotMsg = isEnglish
+        ? `🎨 *TALIYO ART DIRECTOR CO-PILOT ACTIVE!*\n\n` +
+          `Working on an active design right now? Get precision creative feedback:\n\n` +
+          `• *Exact Hex Palettes:* "Suggest luxury real estate palette"\n` +
+          `• *Font Pairings:* "Display + body font pairing for SaaS"\n` +
+          `• *Headline Copy:* "Make this fitness headline punchy"\n` +
+          `• *Figma Specs:* "What margins for 1080x1350 carousel"\n\n` +
+          `👇 *Type your design query directly into chat!*`
+        : `🎨 *TALIYO ART DIRECTOR CO-PILOT ACTIVE!*\n\nAap abhi jo design bana rahe hain, usme direct precision help lein:\n\n` +
+          `• *Exact Hex Palettes:* "Luxury real estate poster ke liye color palette batao"\n` +
+          `• *Font Pairings:* "SaaS carousel ke liye best font pairing"\n` +
+          `• *Headline Copy:* "Is headline ko luxurious aur punchy banao"\n` +
+          `• *Figma/Canva Specs:* "1080x1350 carousel ke liye margin aur padding"\n\n` +
+          `👇 *Koi bhi query direct chat me likh kar bhejiye!*`;
+      return await sendSafeTelegramMessage(chatId, copilotMsg);
+    }
+
+    if (text === '📖 Guide & Support' || text === '/help' || text === '📖 Designer Guide' || text === '📖 Full Designer Guide') {
+      const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
+      const guideMsg = isEnglish
+        ? `📖 *TALIYO CREATIVE STUDIO GUIDE & SUPPORT*\n\n` +
+          `1️⃣ *⚡ Auto Radar Brief:* 1-tap ahead-of-time festival/event strategy.\n` +
+          `2️⃣ *🗓️ Full Calendar:* Browse full-year marketing & cultural dates.\n` +
+          `3️⃣ *🎨 Art Director Co-Pilot:* Precision colors, fonts & headline feedback.\n` +
+          `4️⃣ *💼 Client Profiles:* Private client brand guidelines & tone.\n` +
+          `5️⃣ *🌐 Language:* 1-tap toggle between English and Hinglish.\n\n` +
+          `📩 *Priority Support:* Contact *@virajverse* on Telegram.`
+        : `📖 *TALIYO CREATIVE STUDIO GUIDE & SUPPORT*\n\n` +
+          `1️⃣ *⚡ Auto Radar Brief:* 1-tap me upcoming event ki 6-concept strategy.\n` +
+          `2️⃣ *🗓️ Full Calendar:* Poore saal ke festivals aur marketing dates.\n` +
+          `3️⃣ *🎨 Art Director Co-Pilot:* Active design ke liye exact colors, fonts aur copy.\n` +
+          `4️⃣ *💼 Client Profiles:* Private client brand guidelines aur styling.\n` +
+          `5️⃣ *🌐 Language:* 1-tap me English aur Hinglish switch karein.\n\n` +
+          `📩 *Priority Support:* Contact *@virajverse* on Telegram.`;
+      return await sendSafeTelegramMessage(chatId, guideMsg);
     }
 
     if (text === '/calendar' || text === '🗓️ Full Calendar' || text === '/upcoming' || text === '📅 Upcoming Dates') {
