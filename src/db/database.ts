@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { createClient } from '@libsql/client';
+import { createClient, Client } from '@libsql/client';
+import { UserRecord, ClientRecord, EventRecord, AlertRecord, CreativeIdeaRecord } from '../types/database.js';
 
 const tursoUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
@@ -10,19 +11,25 @@ if (!tursoUrl || !tursoAuthToken) {
 
 console.log(`[Database] 🌐 100% Pure Turso Cloud Engine Active: ${tursoUrl}`);
 
-export const tursoClient = createClient({
+export const tursoClient: Client = createClient({
   url: tursoUrl || 'libsql://dummy.turso.io',
   authToken: tursoAuthToken || 'dummy_token',
 });
 
 // In-Memory Fast Cache for Instant Synchronous Reads (Syncs continuously with Turso Cloud)
 const memCache = {
-  users: new Map(),
-  clients: new Map(),
-  events: new Map(),
-  alerts: new Map(),
-  creative_ideas: new Map()
+  users: new Map<string, UserRecord>(),
+  clients: new Map<string, ClientRecord>(),
+  events: new Map<string, EventRecord>(),
+  alerts: new Map<string, AlertRecord>(),
+  creative_ideas: new Map<string, CreativeIdeaRecord>()
 };
+
+export interface PreparedStatement {
+  get(...args: any[]): any;
+  all(...args: any[]): any[];
+  run(...args: any[]): { changes: number };
+}
 
 /**
  * Unified 100% Cloud Turso Database Interface
@@ -30,22 +37,17 @@ const memCache = {
 const db = {
   client: tursoClient,
 
-  async exec(sql) {
+  async exec(sql: string) {
     return await tursoClient.executeMultiple(sql);
   },
 
-  transaction(fn) {
-    return (...args) => fn(...args);
+  transaction(fn: Function) {
+    return (...args: any[]) => fn(...args);
   },
 
-  prepare(sql) {
-    const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
-    const isInsert = sql.trim().toUpperCase().startsWith('INSERT');
-    const isUpdate = sql.trim().toUpperCase().startsWith('UPDATE');
-    const isDelete = sql.trim().toUpperCase().startsWith('DELETE');
-
+  prepare(sql: string): PreparedStatement {
     return {
-      get(...args) {
+      get(...args: any[]) {
         // Synchronous read from cloud memory-synced tables
         if (sql.includes('FROM users')) {
           if (sql.includes('telegram_chat_id = ?')) {
@@ -98,7 +100,7 @@ const db = {
         return null;
       },
 
-      all(...args) {
+      all(...args: any[]): any[] {
         if (sql.includes('FROM events')) {
           return Array.from(memCache.events.values());
         }
@@ -114,7 +116,7 @@ const db = {
         return [];
       },
 
-      run(...args) {
+      run(...args: any[]) {
         // Fire async execute to Turso Cloud in background
         tursoClient.execute({ sql, args }).catch(err => {
           console.warn(`[Turso Cloud Write Warning]: ${err.message}`);
@@ -122,7 +124,7 @@ const db = {
 
         // Instant In-Memory Cache Update for 0ms latency
         if (sql.includes('INTO users')) {
-          const userObj = {
+          const userObj: UserRecord = {
             id: args[0],
             name: args[1],
             username: args[2] || '',
@@ -254,12 +256,12 @@ export async function initDatabase() {
   try {
     await tursoClient.executeMultiple(schema);
     console.log('[Database] ☁️ Turso Cloud Schema successfully synchronized!');
-  } catch (err) {
+  } catch (err: any) {
     console.warn(`[Database] Turso Cloud Schema Sync Warning: ${err.message}`);
   }
 
   // Seed default master admin into cloud memory cache
-  const defaultAdmin = {
+  const defaultAdmin: UserRecord = {
     id: 'default_user',
     name: 'Viraj (Social Designer)',
     username: 'virajverse',

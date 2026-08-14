@@ -1,8 +1,8 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-export default function fileDirName(metaUrl) {
+export default function fileDirName(metaUrl: string) {
   const __filename = fileURLToPath(metaUrl);
   const __dirname = path.dirname(__filename);
-  return { __filename, __dirname };
+  return { __dirname, __filename };
 }

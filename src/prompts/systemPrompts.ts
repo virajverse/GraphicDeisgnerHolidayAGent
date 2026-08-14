@@ -1,9 +1,26 @@
 /**
- * Taliyo Creative Intelligence AI Agent — System Prompts Registry
- * User-configured master prompts for Context Intelligence & 6-Ideas Generation.
+ * Taliyo Creative Intelligence AI Agent — System Prompts Registry (TypeScript)
  */
 
-export function buildContextSystemPrompt({ event, currentDate, liveDossierText, userProfile, clientProfile }) {
+import { EventRecord, ClientRecord, UserRecord } from '../types/database.js';
+import { EventContext } from '../types/models.js';
+
+interface ContextPromptParams {
+  event: EventRecord;
+  currentDate: string;
+  liveDossierText?: string;
+  userProfile?: UserRecord | null;
+  clientProfile?: ClientRecord | null;
+}
+
+interface IdeationPromptParams {
+  event: EventRecord;
+  context: EventContext;
+  userProfile?: UserRecord | null;
+  clientProfile?: ClientRecord | null;
+}
+
+export function buildContextSystemPrompt({ event, currentDate, liveDossierText, clientProfile }: ContextPromptParams): string {
   const clientIndustry = clientProfile ? clientProfile.industry : 'General';
   const brandTone = clientProfile ? clientProfile.brand_tone : 'Modern & Professional';
   const targetAudience = clientProfile ? clientProfile.audience : 'General Public';
@@ -52,7 +69,7 @@ Keep the output concise, factual, current, and useful. Do not generate the 6 cre
 `;
 }
 
-export function buildIdeationSystemPrompt({ event, context, userProfile, clientProfile }) {
+export function buildIdeationSystemPrompt({ event, context, clientProfile }: IdeationPromptParams): string {
   const clientName = clientProfile ? clientProfile.name : 'General Audience / Brand';
   const clientIndustry = clientProfile ? clientProfile.industry : 'General';
   const brandTone = clientProfile ? clientProfile.brand_tone : 'Modern & Professional';
@@ -120,8 +137,7 @@ Output MUST be strict valid JSON formatted as:
       "audience": "Target audience",
       "difficulty": "Medium",
       "why_it_works": "Why this design will engage viewers"
-    },
-    ... 5 more items for Emotional, Brand-focused, Social-awareness, Interactive, Experimental
+    }
   ],
   "recommendation": {
     "recommended_ids": [1, 4],
