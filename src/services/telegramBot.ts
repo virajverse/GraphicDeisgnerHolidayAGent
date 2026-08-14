@@ -58,8 +58,8 @@ export const DESIGNER_KEYBOARD = {
 export const ADMIN_MASTER_KEYBOARD = {
   keyboard: [
     [{ text: '👑 Admin Panel' }, { text: '👥 Active Designers' }],
-    [{ text: '🚀 Trigger Radar Scan' }, { text: '📊 Deep AI Telemetry' }],
-    [{ text: '📥 Export DPO Dataset' }, { text: '🧹 Prune Cloud Cache' }]
+    [{ text: '🔔 Pending Approvals' }, { text: '🚀 Trigger Radar Scan' }],
+    [{ text: '📥 Export DPO Dataset' }, { text: '📊 Deep AI Telemetry' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -606,10 +606,11 @@ export async function handleTelegramWebhookUpdate(update: any) {
     if (obState && obState.step === 'WAITING_NAME' && !text.startsWith('/')) {
       onboardingTracker.set(chatId.toString(), { step: 'WAITING_SCREENSHOT', name: text, handle: text });
       const step2Msg = `🚀 *STEP 2/2: FAST-TRACK VERIFICATION & ACCESS!*\n\n` +
-        `Apne designer account ko **Fast Verify** karwane ke liye hamare official channels ko subscribe/follow karein:\n\n` +
-        `1️⃣ *Instagram:* https://instagram.com/virajverse\n` +
-        `2️⃣ *Telegram Channel:* https://t.me/virajverse\n\n` +
-        `📸 *Follow / Subscribe karne ke baad uska SCREENSHOT yahan chat me bhej dijiye!* Hamare Admin review karke turant aapka access activate karenge!`;
+        `Apne designer account ko **Fast-Track Verify** karwane ke liye hamare official channels ko follow/subscribe karein:\n\n` +
+        `1️⃣ *Instagram:* https://www.instagram.com/fearless.devx/\n` +
+        `2️⃣ *YouTube Channel:* https://www.youtube.com/@VirajVerse016\n\n` +
+        `📸 *Follow / Subscribe karne ke baad uska SCREENSHOT ISI BOT MEIN PHOTO KI TARAH BHEJ DIJIYE!*\n` +
+        `*(⚠️ Note: Admin ko personal DM na karein, seedha ISI BOT CHAT me photo bhejein taaki auto-verification record ho sake).*`;
       return await sendSafeTelegramMessage(chatId, step2Msg);
     }
 
@@ -698,13 +699,43 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }
 
       if (text === '👥 Active Designers') {
-        const users: UserRecord[] = db.prepare('SELECT * FROM users ORDER BY registered_at DESC LIMIT 15').all();
+        const users: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1 ORDER BY registered_at DESC LIMIT 15').all();
         let designerList = `👥 *ACTIVE REGISTERED DESIGNERS (${users.length})*\n\n`;
         users.forEach((u, i) => {
           designerList += `${i + 1}. *${u.name}* (@${u.username || 'n/a'}) — \`${u.telegram_chat_id}\` [${u.role}]\n`;
         });
         designerList += `\n🔒 *User Isolation:* All accounts strictly private.`;
         return await sendSafeTelegramMessage(chatId, designerList);
+      }
+
+      if (text === '🔔 Pending Approvals' || text === '👥 Pending Verifications') {
+        const pendingUsers: UserRecord[] = db.prepare('SELECT * FROM users WHERE verification_status = "PENDING" ORDER BY registered_at DESC').all();
+        if (pendingUsers.length === 0) {
+          return await sendSafeTelegramMessage(chatId, `🔔 *PENDING VERIFICATIONS*\n\nAbhi koi pending verification request nahi hai. Sabhi designers approved hain!`);
+        }
+        let pendingList = `🔔 *PENDING DESIGNER VERIFICATIONS (${pendingUsers.length})*\n\n`;
+        pendingUsers.forEach((u, i) => {
+          pendingList += `${i + 1}. *${u.name}* (@${u.username || 'n/a'})\n   • Chat ID: \`${u.telegram_chat_id}\`\n   • Handle: ${u.instagram_handle || 'n/a'}\n\n`;
+        });
+        pendingList += `👉 Approve karne ke liye type karein:\n\`/approve CHAT_ID\``;
+        return await sendSafeTelegramMessage(chatId, pendingList);
+      }
+
+      if (text.startsWith('/approve')) {
+        const targetId = text.replace('/approve', '').trim();
+        if (targetId) {
+          db.prepare(`
+            UPDATE users SET is_approved = 1, verification_status = 'APPROVED'
+            WHERE telegram_chat_id = ?
+          `).run(targetId);
+
+          const welcomeApproved = `🎉 *CONGRATULATIONS! YOUR DESIGNER ACCESS IS APPROVED!*\n\n` +
+            `Admin *@virajverse* ne aapka account verify aur approve kar diya hai!\n\n` +
+            `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active hai!*\n` +
+            `Niche diye gaye buttons se shuru karein ya direct prompt bhejein:`;
+          await sendSafeTelegramMessage(targetId, welcomeApproved, { reply_markup: DESIGNER_KEYBOARD });
+          return await sendSafeTelegramMessage(chatId, `✅ Designer \`${targetId}\` has been approved successfully!`);
+        }
       }
 
       if (text === '🚀 Trigger Radar Scan') {
