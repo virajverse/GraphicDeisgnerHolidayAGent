@@ -28,7 +28,7 @@ const activeProcessingUsers = new Set<string>();
 const bruteForceTracker = new Map<string, { attempts: number; lockedUntil: number }>();
 
 // Smart Onboarding & Screenshot Verification Tracker
-const onboardingTracker = new Map<string, { step: 'WAITING_NAME' | 'WAITING_SCREENSHOT'; name?: string; handle?: string }>();
+const onboardingTracker = new Map<string, { step: 'WAITING_DETAILS' | 'WAITING_SCREENSHOT'; name?: string; handle?: string; youtubeName?: string }>();
 
 function checkUserCooldown(chatId: string | number): { allowed: boolean; remainingSec: number } {
   const strId = chatId.toString();
@@ -430,10 +430,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
     if (data === 'gate_register') {
       await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => {});
-      onboardingTracker.set(chatId.toString(), { step: 'WAITING_NAME' });
+      onboardingTracker.set(chatId.toString(), { step: 'WAITING_DETAILS' });
       const regStep1 = `📝 *FREE DESIGNER REGISTRATION (STEP 1/2)*\n\n` +
-        `Aapka swagat hai! Please apna **Full Name aur Instagram Handle ya Portfolio Link** yahan chat me type karke bhejiye:\n\n` +
-        `*(Example: Rahul Sharma - @rahul_graphics)*`;
+        `Aapka swagat hai! Please apna **Name, Instagram Handle aur YouTube Channel Name** chat me type karke bhejiye:\n\n` +
+        `*(Format Example: Rahul Sharma | @rahul_graphics | @RahulDesignsYT)*`;
       return await sendSafeTelegramMessage(chatId, regStep1);
     }
 
@@ -560,12 +560,13 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
     // Forward Photo Proof to Master Admin with 1-Click Action Buttons
     if (MASTER_ADMIN_CHAT_ID && botInstance) {
-      const adminCaption = `🔔 *NEW DESIGNER VERIFICATION REQUEST*\n\n` +
+      const adminCaption = `🔔 *NEW DESIGNER REGISTRATION REQUEST*\n\n` +
         `• *Applicant:* ${applicantName}\n` +
-        `• *Handle / Info:* ${applicantHandle}\n` +
+        `• *Instagram:* [@${applicantHandle}](https://instagram.com/${applicantHandle})\n` +
+        `• *YouTube Channel:* ${obState?.youtubeName || 'n/a'}\n` +
         `• *Telegram User:* @${msg.from?.username || 'n/a'}\n` +
         `• *Chat ID:* \`${chatId}\`\n\n` +
-        `👇 *Review screenshot & choose action:*`;
+        `👇 *1-Tap Approve or Reject:*`;
 
       const adminVerifyButtons = {
         inline_keyboard: [
@@ -595,12 +596,21 @@ export async function handleTelegramWebhookUpdate(update: any) {
     const text = msg.text ? msg.text.trim() : '';
     const chatId = msg.chat.id;
 
-    // Check Onboarding State Machine (Step 1: Capturing Name & Handle)
+    // Check Onboarding State Machine (Step 1: Capturing Name, Instagram & YouTube)
     const obState = onboardingTracker.get(chatId.toString());
-    if (obState && obState.step === 'WAITING_NAME' && !text.startsWith('/')) {
+    if (obState && obState.step === 'WAITING_DETAILS' && !text.startsWith('/')) {
+      const parts = text.split(/\||,|\n/).map(s => s.trim());
+      const name = parts[0] || text;
       const instaMatch = text.match(/@([a-zA-Z0-9._]+)/);
-      const targetHandle = instaMatch ? instaMatch[1] : text.split(/[-–,\s]+/)[1] || text;
-      onboardingTracker.set(chatId.toString(), { step: 'WAITING_SCREENSHOT', name: text, handle: targetHandle });
+      const targetHandle = instaMatch ? instaMatch[1] : (parts[1] ? parts[1].replace('@', '') : 'n/a');
+      const ytChannel = parts[2] || (parts.length > 1 ? parts[parts.length - 1] : 'YouTube User');
+
+      onboardingTracker.set(chatId.toString(), {
+        step: 'WAITING_SCREENSHOT',
+        name,
+        handle: targetHandle,
+        youtubeName: ytChannel
+      });
 
       // Run live Instagram Scraper in real-time
       const instaProfile = await scrapeInstagramProfile(targetHandle);
@@ -613,8 +623,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `Apne designer account ko **Fast-Track Verify** karwane ke liye hamare official channels ko follow/subscribe karein:\n\n` +
         `1️⃣ *Instagram:* https://www.instagram.com/fearless.devx/\n` +
         `2️⃣ *YouTube Channel:* https://www.youtube.com/@VirajVerse016\n\n` +
-        `📸 *Follow / Subscribe karne ke baad uska SCREENSHOT ISI BOT MEIN PHOTO KI TARAH BHEJ DIJIYE!*\n` +
-        `*(⚠️ Note: Admin ko personal DM na karein, seedha ISI BOT CHAT me photo bhejein taaki auto-verification record ho sake).*`;
+        `📸 *Follow / Subscribe karne ke baad bas 1 SCREENSHOT ISI BOT MEIN bhej dijiye!* Admin review karke turant aapka access activate karenge!`;
       return await sendSafeTelegramMessage(chatId, step2Msg);
     }
 
