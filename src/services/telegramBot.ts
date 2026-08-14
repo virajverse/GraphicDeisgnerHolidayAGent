@@ -721,10 +721,16 @@ export async function handleTelegramWebhookUpdate(update: any) {
           ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED', name=?, instagram_handle=?
         `).run(`user_${chatId}`, name, msg.from?.username || '', chatId.toString(), targetHandle, name, targetHandle);
 
+        const groupSetting = db.prepare("SELECT * FROM system_settings WHERE key = 'community_group'").get();
+        let groupAction = '';
+        if (groupSetting && groupSetting.value && groupSetting.is_enabled === 1) {
+          groupAction = `\n\n👥 *Join Official Designer Ground:* [Tap Here to Join Ground](${groupSetting.value})\n`;
+        }
+
         const instantApprovedMsg = `🎉 *CONGRATULATIONS! YOUR ACCOUNT IS VERIFIED & ACTIVATED!*${profileBadge}\n` +
           `✅ *Verified Channels:*\n` +
           `• Instagram: [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
-          `• YouTube: *${ytChannel}*\n\n` +
+          `• YouTube: *${ytChannel}*${groupAction}\n\n` +
           `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active ho chuka hai!*\n` +
           `Niche diye gaye buttons se shuru karein ya direct koi prompt bhejein:`;
         
@@ -906,6 +912,62 @@ export async function handleTelegramWebhookUpdate(update: any) {
           await sendSafeTelegramMessage(targetId, welcomeApproved, { reply_markup: DESIGNER_KEYBOARD });
           return await sendSafeTelegramMessage(chatId, `✅ Designer \`${targetId}\` has been approved successfully!`);
         }
+      }
+
+      if (text.startsWith('/setgroup')) {
+        const link = text.replace('/setgroup', '').trim();
+        if (!link) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/setgroup https://t.me/yourgroup\``);
+        }
+        db.prepare(`
+          INSERT INTO system_settings (key, value, is_enabled)
+          VALUES ('community_group', ?, 1)
+          ON CONFLICT(key) DO UPDATE SET value = ?, is_enabled = 1, updated_at = CURRENT_TIMESTAMP
+        `).run(link, link);
+
+        return await sendSafeTelegramMessage(chatId, `✅ *Community Ground Set & Enabled!*\n\n• Link: ${link}\n• Status: 🟢 ACTIVE for new & existing designers.`);
+      }
+
+      if (text.startsWith('/togglegroup')) {
+        const mode = text.replace('/togglegroup', '').trim().toLowerCase();
+        const isEnabled = mode === 'on' || mode === '1' || mode === 'enable' ? 1 : 0;
+        const currentLink = db.prepare("SELECT value FROM system_settings WHERE key = 'community_group'").get()?.value || 'https://t.me/virajverse';
+        db.prepare(`
+          INSERT INTO system_settings (key, value, is_enabled)
+          VALUES ('community_group', ?, ?)
+          ON CONFLICT(key) DO UPDATE SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP
+        `).run(currentLink, isEnabled, isEnabled);
+
+        return await sendSafeTelegramMessage(chatId, `⚙️ *Community Ground Gate Updated:*\n• Status: ${isEnabled ? '🟢 ACTIVE (Shown to Designers)' : '🔴 DISABLED (Hidden)'}`);
+      }
+
+      if (text === '/notifygroup' || text === '👥 Broadcast Group Invite') {
+        const setting = db.prepare("SELECT * FROM system_settings WHERE key = 'community_group'").get();
+        if (!setting || !setting.value || setting.is_enabled !== 1) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Community Ground is currently disabled or has no link.* Set it first with \`/setgroup https://t.me/yourgroup\``);
+        }
+        const activeUsers: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1').all();
+        const groupMsg = `👥 *EXCLUSIVE DESIGNER COMMUNITY INVITATION!*\n\n` +
+          `Hamara official **Taliyo / VirajVerse Designer Ground** active ho chuka hai!\n\n` +
+          `Yahan sabhi approved graphic designers connect karte hain, portfolio share karte hain aur live collaboration karte hain.\n\n` +
+          `👇 Niche button se join karein aur continue studio access karein:`;
+        
+        let sentCount = 0;
+        for (const u of activeUsers) {
+          if (u.telegram_chat_id && botInstance) {
+            await botInstance.sendMessage(u.telegram_chat_id, groupMsg, {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '👥 Join Official Designer Ground', url: setting.value }],
+                  [{ text: '🚀 Continue to AI Studio', callback_data: 'menu_continue' }]
+                ]
+              }
+            }).catch(() => {});
+            sentCount++;
+          }
+        }
+        return await sendSafeTelegramMessage(chatId, `✅ *Group Invitation Broadcast Complete:* Sent to ${sentCount} active designers!`);
       }
 
       if (text.startsWith('/addevent')) {

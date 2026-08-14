@@ -22,7 +22,8 @@ const memCache = {
   clients: new Map<string, ClientRecord>(),
   events: new Map<string, EventRecord>(),
   alerts: new Map<string, AlertRecord>(),
-  creative_ideas: new Map<string, CreativeIdeaRecord>()
+  creative_ideas: new Map<string, CreativeIdeaRecord>(),
+  settings: new Map<string, { key: string; value: string; is_enabled: number }>()
 };
 
 export interface PreparedStatement {
@@ -48,6 +49,10 @@ const db = {
   prepare(sql: string): PreparedStatement {
     return {
       get(...args: any[]) {
+        if (sql.includes('FROM system_settings')) {
+          const key = args[0];
+          return memCache.settings.get(key) || { key, value: '', is_enabled: 0 };
+        }
         // Synchronous read from cloud memory-synced tables
         if (sql.includes('FROM users')) {
           if (sql.includes('telegram_chat_id = ?')) {
@@ -59,7 +64,8 @@ const db = {
           if (sql.includes('id = ?')) {
             return memCache.users.get(args[0]) || null;
           }
-          return Array.from(memCache.users.values())[0] || null;
+          const allUsers = Array.from(memCache.users.values());
+          return allUsers[0] || null;
         }
 
         if (sql.includes('FROM clients')) {
@@ -133,6 +139,13 @@ const db = {
             role: args[5] || 'DESIGNER'
           };
           memCache.users.set(userObj.id, userObj);
+        }
+
+        if (sql.includes('INTO system_settings') || sql.includes('UPDATE system_settings')) {
+          const key = args[0];
+          const value = args[1];
+          const isEnabled = args[2] !== undefined ? args[2] : 1;
+          memCache.settings.set(key, { key, value, is_enabled: isEnabled });
         }
 
         return { changes: 1 };
@@ -239,6 +252,13 @@ export async function initDatabase() {
       rating TEXT NOT NULL,
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      is_enabled INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS agent_logs (
