@@ -31,7 +31,7 @@ if (!process.env.VERCEL) {
 // REST API Endpoints
 
 // Live Scraper Debug Endpoint
-app.get('/api/scrape/live', async (req, res) => {
+app.get(['/api/scrape/live', '/scrape/live'], async (req, res) => {
   const query = req.query.q || 'Independence Day India';
   try {
     const result = await executeMultiSourceScrape(query);
@@ -41,8 +41,8 @@ app.get('/api/scrape/live', async (req, res) => {
   }
 });
 
-// Get System Dashboard Summary Stats
-app.get('/api/stats', (req, res) => {
+// Get System Dashboard Summary Stats & Health
+app.get(['/api/stats', '/stats', '/api/health', '/health'], (req, res) => {
   try {
     const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get()?.count || 20;
     const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;
@@ -238,7 +238,7 @@ app.get('/api/logs', (req, res) => {
 });
 
 // Telegram Webhook Endpoint (For Vercel Serverless Production with Secret Token Auth)
-app.post('/api/telegram/webhook', async (req, res) => {
+app.post(['/api/telegram/webhook', '/telegram/webhook'], async (req, res) => {
   const secretHeader = req.headers['x-telegram-bot-api-secret-token'];
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
