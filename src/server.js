@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import db, { initDatabase } from './db/database.js';
-import { initTelegramBot, handleUpcomingCommand, handleTodayCommand, handleOnDemandIdeas } from './services/telegramBot.js';
+import { initTelegramBot, handleUpcomingCommand, handleTodayCommand, handleOnDemandIdeas, handleTelegramWebhookUpdate } from './services/telegramBot.js';
 import { initScheduler, runEventCheckAndAlert } from './services/scheduler.js';
 import fileDirName from './utils/fileDir.js';
 
@@ -234,9 +234,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
   if (!update) return res.sendStatus(400);
 
   try {
-    if (telegramBot) {
-      telegramBot.processUpdate(update);
-    }
+    await handleTelegramWebhookUpdate(update);
     res.json({ success: true });
   } catch (err) {
     console.error(`[Webhook Error]: ${err.message}`);

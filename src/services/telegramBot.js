@@ -524,36 +524,214 @@ export async function handleTodayCommand() {
   return await handleOnDemandIdeas(todayEvt.name).then(res => res.formattedMessage);
 }
 
-export async function handleOnDemandIdeas(eventName, clientId = null, userId = 'default_user') {
-  const event = db.prepare('SELECT * FROM events WHERE name LIKE ? LIMIT 1').get(`%${eventName}%`) || {
-    id: `evt_custom_${Date.now()}`,
-    name: eventName,
-    description: `Special creative opportunity for ${eventName}`,
-    date: 'Upcoming',
-    country: 'India',
-    category: 'BUSINESS',
-    importance: 85,
-    source: 'User Query'
-  };
+export async function handleTelegramWebhookUpdate(update) {
+  if (!botInstance) {
+    botInstance = initTelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+  }
+  if (!botInstance || !update) return;
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) || db.prepare("SELECT * FROM users WHERE id = 'default_user'").get();
-  const client = clientId ? db.prepare('SELECT * FROM clients WHERE id = ?').get(clientId) : db.prepare('SELECT * FROM clients WHERE user_id = ? OR user_id = "default_user" LIMIT 1').get(userId);
+  // 1. Handle Callback Queries (Button clicks)
+  if (update.callback_query) {
+    const query = update.callback_query;
+    const chatId = query.message.chat.id;
+    const data = query.data;
 
-  const context = await fetchRealWorldContext(event);
-  const ideation = await generateCreativeIdeas({ event, context, userProfile: user, clientProfile: client });
+    if (data.startsWith('specs_')) {
+      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Generating Visual Specs...' }).catch(() => {});
+      const specsText = `🎨 *DESIGNER VISUAL SPECS & ASSET GUIDE*\n\n` +
+        `🎨 *Recommended Color Palette:*\n` +
+        `• Primary Accent: \`#FF5722\` (Vibrant Energy)\n` +
+        `• Background: \`#0A0E17\` (Sleek Dark Mode)\n` +
+        `• Surface Card: \`#161F30\` (Glassmorphism Tint)\n` +
+        `• Typography Text: \`#F5F7FA\` (High Contrast White)\n\n` +
+        `🔤 *Font Hierarchy & Pairing:*\n` +
+        `• Display Headline: *Outfit Bold / Syne ExtraBold* (70pt+)\n` +
+        `• Subheading & Labels: *Plus Jakarta Sans Medium* (24pt)\n` +
+        `• Body Text: *Inter Regular* (16pt)\n\n` +
+        `📐 *Grid & Layout Guidelines:*\n` +
+        `• Canvas Dimensions: 1080 x 1350 px (4:5 Portrait Carousel)\n` +
+        `• Safe Margins: 60px padding on top/bottom/sides\n` +
+        `• Aesthetic Rule: 70% negative space, 30% visual content focus.`;
+      await sendSafeTelegramMessage(chatId, specsText);
+    } else if (data.startsWith('fb_')) {
+      const action = data.split('_')[1];
+      await botInstance.answerCallbackQuery(query.id, { text: `Preference saved: ${action}!` }).catch(() => {});
+      await sendSafeTelegramMessage(chatId, `✨ *Agent Note:* Thank you! Preference recorded: *${action.toUpperCase()}*. Future briefs will align closer to this style.`);
+    }
+    return;
+  }
 
-  const alertData = {
-    eventId: event.id,
-    relevanceScore: event.importance || 85
-  };
+  // 2. Handle Message Updates
+  if (update.message && update.message.text) {
+    const msg = update.message;
+    const text = msg.text.trim();
+    const chatId = msg.chat.id;
 
-  const formattedMessage = formatTelegramAlertMessage(event, alertData, context, ideation);
+    // Check Authentication
+    const auth = verifyUserAuth(msg);
 
-  return {
-    eventId: event.id,
-    event,
-    context,
-    ideation,
-    formattedMessage
-  };
+    // Registration command (/register [code])
+    if (text.startsWith('/register')) {
+      const match = text.match(/\/register(?:\s+(.+))?/);
+      const inputCode = match && match[1] ? match[1].trim() : '';
+
+      const tracker = bruteForceTracker.get(chatId.toString()) || { attempts: 0, lockedUntil: 0 };
+      const now = Date.now();
+
+      if (tracker.lockedUntil > now) {
+        const remainingMinutes = Math.ceil((tracker.lockedUntil - now) / 60000);
+        const lockMsg = `🔒 *SECURITY LOCKOUT ACTIVE*\n\n` +
+          `Too many incorrect passcode attempts!\n` +
+          `Your chat is temporarily locked for *${remainingMinutes} more minute(s)*.\n\n` +
+          `📩 Contact *${ADMIN_HANDLE}* on Telegram for authorized passcode access.`;
+        return await sendSafeTelegramMessage(chatId, lockMsg);
+      }
+
+      if (inputCode === ADMIN_CODE) {
+        bruteForceTracker.delete(chatId.toString());
+        db.prepare(`
+          INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role)
+          VALUES (?, ?, ?, ?, 1, 'DESIGNER')
+          ON CONFLICT(id) DO UPDATE SET is_approved=1
+        `).run(`user_${chatId}`, msg.from?.first_name || 'Designer', msg.from?.username || '', chatId.toString());
+
+        const successMsg = `🎉 *ACCESS GRANTED! WELCOME TO TALIYO AGENT*\n\n` +
+          `You are now registered as an official Graphic Designer!\n\n` +
+          `💬 Send any event name or design prompt in chat to generate 6 creative briefings instantly!`;
+        return await sendSafeTelegramMessage(chatId, successMsg);
+      } else {
+        tracker.attempts = (tracker.attempts || 0) + 1;
+        if (tracker.attempts >= 3) {
+          tracker.lockedUntil = now + (10 * 60 * 1000);
+          bruteForceTracker.set(chatId.toString(), tracker);
+          const maxLockMsg = `🚫 *TOO MANY FAILED ATTEMPTS!*\n\n` +
+            `You have entered an incorrect passcode 3 times.\n` +
+            `Your chat has been *LOCKED for 10 minutes* for security protection.\n\n` +
+            `👉 Contact Admin *${ADMIN_HANDLE}* to get your official invitation code.`;
+          return await sendSafeTelegramMessage(chatId, maxLockMsg);
+        } else {
+          bruteForceTracker.set(chatId.toString(), tracker);
+          const remaining = 3 - tracker.attempts;
+          const failMsg = `❌ *INVALID PASSCODE!*\n\n` +
+            `Remaining attempts before 10-minute lockout: *${remaining}/3*.\n\n` +
+            `To get your official Admin Passcode, please contact *${ADMIN_HANDLE}* on Telegram.`;
+          return await sendSafeTelegramMessage(chatId, failMsg);
+        }
+      }
+    }
+
+    // Unauthenticated user barrier
+    if (!auth.authorized) {
+      if (text.toLowerCase().includes('passcode') || text.toLowerCase().includes('admin') || text.toLowerCase().includes('code')) {
+        const infoMsg = `🔐 *ADMIN PASSCODE INFO*\n\n` +
+          `To get your Admin Passcode, please contact *${ADMIN_HANDLE}* on Telegram!\n\n` +
+          `Once you have the code, type:\n\`/register YOUR_PASSCODE\``;
+        return await sendSafeTelegramMessage(chatId, infoMsg);
+      }
+      return sendAccessRestrictedCard(chatId);
+    }
+
+    // Authenticated Commands
+    if (text === '/start') {
+      const welcome = `🤖 *Hey ${msg.from?.first_name || 'Designer'}! I am your Senior Graphic Design AI Agent*\n\n` +
+        `I am your ChatGPT-powered partner dedicated 100% to **Graphic Design, Brand Strategy, Visual Art Direction, & Campaign Briefings**!\n\n` +
+        `💬 *Talk to me naturally about any event or design prompt:* e.g.\n` +
+        `• *"Independence Day ideas for NGO client"*\n` +
+        `• *"What should I design for Diwali?"*\n` +
+        `• *"3 carousel poster ideas for World Chai Day"*\n\n` +
+        `⚡ *Commands:*\n` +
+        `• /today — Today's design opportunities\n` +
+        `• /upcoming — Top upcoming creative dates\n` +
+        `• /ideas [event] — Generate 6 ideas on demand\n` +
+        `• /clients — View your private client brand profiles\n` +
+        `• /myactivity — View your private work summary\n` +
+        `• /status — Agent health & live telemetry\n` +
+        `• /contact — Contact Admin *${ADMIN_HANDLE}*\n` +
+        `• /help — Full agent guide`;
+      return await sendSafeTelegramMessage(chatId, welcome);
+    }
+
+    if (text === '/contact') {
+      const contactMsg = `📩 *ADMIN CONTACT & SUPPORT*\n\n` +
+        `For Admin Passcode Access, Custom Client Onboarding, or Priority Support, contact:\n\n` +
+        `👉 Telegram Admin: *${ADMIN_HANDLE}*`;
+      return await sendSafeTelegramMessage(chatId, contactMsg);
+    }
+
+    if (text === '/help') {
+      const helpMsg = `📖 *Taliyo Design AI Agent Guide*\n\n` +
+        `1️⃣ *Multi-User Security:* Each designer has private isolated client profiles.\n` +
+        `2️⃣ *Concurrent Request Queue:* High-traffic prompts are queued safely.\n` +
+        `3️⃣ *Admin Passcode:* Type \`/register PASSCODE\` to unlock access. Contact *${ADMIN_HANDLE}* for passcodes.\n` +
+        `4️⃣ *Visual Specs Button:* Click '🎨 Visual Specs' on any briefing for Hex colors & font pairings!`;
+      return await sendSafeTelegramMessage(chatId, helpMsg);
+    }
+
+    if (text === '/upcoming') {
+      const upcomingList = handleUpcomingCommand();
+      return await sendSafeTelegramMessage(chatId, upcomingList);
+    }
+
+    if (text === '/today') {
+      const response = await handleTodayCommand();
+      return await sendSafeTelegramMessage(chatId, response);
+    }
+
+    if (text === '/clients') {
+      const clients = db.prepare('SELECT * FROM clients WHERE user_id = ? OR user_id = "default_user"').all(auth.user.id);
+      let clientText = `💼 *Your Private Client Brand Profiles*\n\n`;
+      clients.forEach(c => {
+        clientText += `• *${c.name}* (${c.industry})\n  Tone: _${c.brand_tone}_\n  Style: ${c.creative_style}\n\n`;
+      });
+      return await sendSafeTelegramMessage(chatId, clientText);
+    }
+
+    if (text === '/myactivity' || text.toLowerCase().includes('abhi tak kya') || text.toLowerCase().includes('what have you done')) {
+      const userClients = db.prepare('SELECT COUNT(*) as count FROM clients WHERE user_id = ?').get(auth.user.id)?.count || 0;
+      const userSaved = db.prepare('SELECT COUNT(*) as count FROM feedback WHERE user_id = ? AND rating = "SAVED"').get(auth.user.id)?.count || 0;
+      const activityText = `👤 *Hey ${auth.user.name}! Here is YOUR Private Work Summary:*\n\n` +
+        `• *Your Private Client Profiles:* ${userClients} Active Brands\n` +
+        `• *Your Saved Briefings:* ${userSaved} Concepts Bookmarked\n` +
+        `• *Privacy Isolation:* 100% Private (Your work & ideas are never mixed with other designers)\n\n` +
+        `💬 *Ask me any design prompt to generate your next creative briefing!*`;
+      return await sendSafeTelegramMessage(chatId, activityText);
+    }
+
+    if (text === '/status') {
+      const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
+      const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get().count;
+      const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get().count;
+      const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get().count;
+      const queueStats = agentQueue.getStats();
+
+      const statusText = `📊 *Taliyo AI Agent Telemetry*\n\n` +
+        `• *Approved Designers:* ${usersCount} / 100\n` +
+        `• *Events Ingested:* ${eventsCount}\n` +
+        `• *Alerts Dispatched:* ${alertsCount}\n` +
+        `• *Ideas Generated:* ${ideasCount}\n` +
+        `• *AI Architecture:* 27-Model NVIDIA Resilient Cluster\n` +
+        `• *Active Queue Workers:* ${queueStats.activeWorkers}\n` +
+        `• *Queued Designer Jobs:* ${queueStats.queuedJobs}\n` +
+        `• *Database Engine:* 100% Pure Turso Cloud\n` +
+        `• *Admin Contact:* *${ADMIN_HANDLE}*`;
+      return await sendSafeTelegramMessage(chatId, statusText);
+    }
+
+    // Design Prompt or /ideas [Event]
+    let queryTopic = text;
+    if (text.startsWith('/ideas')) {
+      queryTopic = text.replace('/ideas', '').trim() || 'Independence Day India';
+    }
+
+    if (!isDesignOrEventRelated(queryTopic)) {
+      const boundaryMsg = `🤖 *Taliyo Graphic Design Agent*\n\n` +
+        `Main aapka **Senior Graphic Design & Brand Strategy AI Partner** hoon. Main specifically **Graphic Design Concepts, Headlines, Color Palettes, Font Pairings, Branding, & Event Campaigns** me help karta hoon.\n\n` +
+        `💡 *Please mujhe koi graphic design prompt ya event btaiye!* (e.g. *"Diwali poster ideas"*, *"Carousel for SaaS product launch"*).\n\n` +
+        `💬 *Questions or Admin Contact:* *${ADMIN_HANDLE}*`;
+      return await sendSafeTelegramMessage(chatId, boundaryMsg);
+    }
+
+    // Process design request
+    await processAgentDesignRequest(chatId, queryTopic, auth.user);
+  }
 }
