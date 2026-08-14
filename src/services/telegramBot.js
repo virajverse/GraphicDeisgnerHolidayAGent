@@ -141,8 +141,9 @@ export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN) {
   }
 
   try {
-    botInstance = new TelegramBot(token, { polling: true });
-    console.log('[TelegramBot] 🤖 Autonomous AI Agent Telegram Gateway Active with Multi-User Auth & Queue!');
+    const isWebhookMode = Boolean(process.env.VERCEL || process.env.NODE_ENV === 'production');
+    botInstance = new TelegramBot(token, { polling: !isWebhookMode });
+    console.log(`[TelegramBot] 🤖 Autonomous AI Agent Active (Mode: ${isWebhookMode ? 'Serverless Webhook' : 'Local Polling'})!`);
 
     // 1. Agent Welcome & Registration Checker (/start)
     botInstance.onText(/\/start/, (msg) => {

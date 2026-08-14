@@ -234,27 +234,12 @@ app.post('/api/telegram/webhook', async (req, res) => {
   if (!update) return res.sendStatus(400);
 
   try {
-    if (update.message && update.message.text) {
-      const msg = update.message;
-      const text = msg.text.trim();
-      const chatId = msg.chat.id;
-
-      if (text.startsWith('/ideas')) {
-        const topic = text.replace('/ideas', '').trim() || 'Independence Day India';
-        const result = await handleOnDemandIdeas(topic);
-        if (telegramBot) {
-          await telegramBot.sendMessage(chatId, result.formattedMessage, { parse_mode: 'Markdown' });
-        }
-      } else if (text === '/upcoming') {
-        const reply = handleUpcomingCommand();
-        if (telegramBot) await telegramBot.sendMessage(chatId, reply, { parse_mode: 'Markdown' });
-      } else if (text === '/today') {
-        const reply = await handleTodayCommand();
-        if (telegramBot) await telegramBot.sendMessage(chatId, reply, { parse_mode: 'Markdown' });
-      }
+    if (telegramBot) {
+      telegramBot.processUpdate(update);
     }
     res.json({ success: true });
   } catch (err) {
+    console.error(`[Webhook Error]: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
   }
 });
