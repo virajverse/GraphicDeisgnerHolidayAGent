@@ -12,19 +12,25 @@ async function run27ClusterPipelineTest() {
   console.log('🧪 TALIYO CREATIVE AGENT — 27-MODEL CLUSTER PIPELINE FULL AUDIT');
   console.log('================================================================================\n');
 
+  const allAssignedModels = [
+    ...(MODEL_CLUSTERS.FRONT_DISPATCHER || []),
+    ...MODEL_CLUSTERS.SCOPE_GUARD,
+    ...MODEL_CLUSTERS.NEWS_SYNTHESIS,
+    ...MODEL_CLUSTERS.CREATIVE_COPY,
+    ...MODEL_CLUSTERS.DEEP_STRATEGY,
+    ...MODEL_CLUSTERS.TRANSLATION_CALIBRATION
+  ];
+  const uniqueModels = Array.from(new Set(allAssignedModels));
+
   console.log(`📊 Active Cluster Model Distribution:`);
+  console.log(`• Front Dispatcher Pool: ${(MODEL_CLUSTERS.FRONT_DISPATCHER || []).length} Models`);
   console.log(`• Scope Guard Pool: ${MODEL_CLUSTERS.SCOPE_GUARD.length} Models`);
   console.log(`• News Synthesis Pool: ${MODEL_CLUSTERS.NEWS_SYNTHESIS.length} Models`);
   console.log(`• Creative Copy Pool: ${MODEL_CLUSTERS.CREATIVE_COPY.length} Models`);
   console.log(`• Deep Strategy Pool: ${MODEL_CLUSTERS.DEEP_STRATEGY.length} Models`);
   console.log(`• Translation Pool: ${MODEL_CLUSTERS.TRANSLATION_CALIBRATION.length} Models`);
-  console.log(`🔥 TOTAL CLUSTER MODELS: ${
-    MODEL_CLUSTERS.SCOPE_GUARD.length +
-    MODEL_CLUSTERS.NEWS_SYNTHESIS.length +
-    MODEL_CLUSTERS.CREATIVE_COPY.length +
-    MODEL_CLUSTERS.DEEP_STRATEGY.length +
-    MODEL_CLUSTERS.TRANSLATION_CALIBRATION.length
-  } Models\n`);
+  console.log(`⚡ TOTAL CASCADE SLOTS: ${allAssignedModels.length} Slots across 6 Pools`);
+  console.log(`💎 UNIQUE SPECIALIZED NIM MODELS: ${uniqueModels.length} Unique Models\n`);
 
   const event = db.prepare("SELECT * FROM events WHERE id = 'evt_ind_day'").get() || {
     id: 'evt_ind_day',

@@ -1,0 +1,983 @@
+{
+  "meta/llama-3.1-8b-instruct": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 2471.89,
+    "total_chars": 4449,
+    "avg_quality_score": 50.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 2955.2,
+        "chars_count": 972,
+        "score": 75,
+        "sample": "Ek luxury modern penthouse ke liye aap iske liye yeh 3 exact Hex color codes aur 1 display + body font pairing suggest kar sakta hoon:\n\n**Color Scheme"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 3738.8,
+        "chars_count": 2078,
+        "score": 50,
+        "sample": "World Photography Day ke liye 6 alag angles aur unke punchy headlines:\n\n1. Educational Angle:\n- Headline: \"Khojne Ki Awaaz: Photography Ki Duniya Mein"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 1883.34,
+        "chars_count": 879,
+        "score": 50,
+        "sample": "Instagram 4:5 portrait carousel ke liye design guidelines hain:\n\n**Canvas Dimensions:**\n- Canvas ki size 1080 x 1350 pixels hogi (4:5 aspect ratio).\n-"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 1310.24,
+        "chars_count": 520,
+        "score": 25,
+        "sample": "Yeh hain 3 short, witty aur emotional Hinglish headlines:\n\n1. \"Monsoon mein masala, hamaare chai mein pyaar!\"\n(In the monsoon, there's flavor, and in "
+      }
+    ]
+  },
+  "nvidia/nemotron-mini-4b-instruct": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 2959.1,
+    "total_chars": 3291,
+    "avg_quality_score": 50.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 4773.44,
+        "chars_count": 1346,
+        "score": 75,
+        "sample": "Sure, I'd be happy to help you with that. Here are three color combinations for a luxury modern penthouse poster, along with a suggested font pairing:"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 1508.3,
+        "chars_count": 477,
+        "score": 50,
+        "sample": "1. \"Unleash Creativity: 3D Photography Techniques for World Photography Day\"\n2. \"Embrace the Emotional Connection: A Guide to Storytelling through 3D "
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 3498.02,
+        "chars_count": 936,
+        "score": 50,
+        "sample": "Sure, I'd be happy to help you with that. Here's the exact pixel dimensions, padding margins, and font sizes for an Instagram 4:5 portrait carousel:\n\n"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 2056.62,
+        "chars_count": 532,
+        "score": 25,
+        "sample": "Sure, I'd be happy to help! Here are three Hinglish hooks for your organic Chai brand's monsoon campaign:\n\n1. \"Khoya chai ka monsoon kaun hai? Kaun ha"
+      }
+    ]
+  },
+  "openai/gpt-oss-20b": {
+    "success_rate": "0/4",
+    "avg_latency_ms": 99999,
+    "total_chars": 0,
+    "avg_quality_score": 0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "The read operation timed out"
+      }
+    ]
+  },
+  "minimaxai/minimax-m3": {
+    "success_rate": "2/4",
+    "avg_latency_ms": 5421.37,
+    "total_chars": 2410,
+    "avg_quality_score": 75.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 2486.55,
+        "chars_count": 543,
+        "score": 75,
+        "sample": "**Luxury Modern Penthouse Poster**\n\n🎨 **Color Palette:**\n- **#0A0A0A** — Deep Onyx Black (background / contrast base)\n- **#C9A961** — Champagne Gold ("
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 8356.19,
+        "chars_count": 1867,
+        "score": 75,
+        "sample": "# World Photography Day — 6 Creative Angles\n\n---\n\n## 1. 📚 Educational Angle\n**Headline:** *\"Ek Frame Mein Duniya: Photography Ki 5 Kahaniyan Jo Aapko "
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "HTTP 429: {\"status\":429,\"title\":\"Too Many Requests\"}"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "HTTP 429: {\"status\":429,\"title\":\"Too Many Requests\"}"
+      }
+    ]
+  },
+  "nvidia/llama-3.1-nemoguard-8b-topic-control": {
+    "success_rate": "0/4",
+    "avg_latency_ms": 99999,
+    "total_chars": 0,
+    "avg_quality_score": 0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "The read operation timed out"
+      }
+    ]
+  },
+  "nvidia/nemotron-3.5-content-safety": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 1586.67,
+    "total_chars": 68,
+    "avg_quality_score": 0.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 3918.31,
+        "chars_count": 17,
+        "score": 0,
+        "sample": "User Safety: safe"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 677.86,
+        "chars_count": 17,
+        "score": 0,
+        "sample": "User Safety: safe"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 494.45,
+        "chars_count": 17,
+        "score": 0,
+        "sample": "User Safety: safe"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 1256.08,
+        "chars_count": 17,
+        "score": 0,
+        "sample": "User Safety: safe"
+      }
+    ]
+  },
+  "nvidia/llama-3.1-nemotron-safety-guard-8b-v3": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 1035.1,
+    "total_chars": 173,
+    "avg_quality_score": 0.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 728.07,
+        "chars_count": 23,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\"}"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 1109.12,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 739.93,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 1563.27,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      }
+    ]
+  },
+  "nvidia/llama-3.1-nemoguard-8b-content-safety": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 722.49,
+    "total_chars": 200,
+    "avg_quality_score": 0.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 559.92,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 765.3,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 584.65,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 980.09,
+        "chars_count": 50,
+        "score": 0,
+        "sample": "{\"User Safety\": \"safe\", \"Response Safety\": \"safe\"}"
+      }
+    ]
+  },
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": {
+    "success_rate": "3/4",
+    "avg_latency_ms": 4336.62,
+    "total_chars": 844,
+    "avg_quality_score": 50.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 3330.38,
+        "chars_count": 101,
+        "score": 75,
+        "sample": "#0A0A0A  \n#E5E5E5  \n#D4AF37  \n\nDisplay: **Playfair Display Bold**  \nBody: **Source Sans Pro Regular**"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 4171.9,
+        "chars_count": 556,
+        "score": 50,
+        "sample": "**1. Educational – “Capture the Science of Light: Learn, Shoot, Master.”**  \n**2. Emotional – “One Frame, One Feeling: Relive the Moments That Matter."
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 5507.58,
+        "chars_count": 187,
+        "score": 25,
+        "sample": "1. **Monsoon ki chai, 100% organic – dil ki baarish!**  \n2. **Barish ka saans, organic chai ka jadoo – khushiyon ki sip!**  \n3. **Garmi nahi, garmi ch"
+      }
+    ]
+  },
+  "meta/llama-3.2-11b-vision-instruct": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 8776.34,
+    "total_chars": 4270,
+    "avg_quality_score": 50.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 4454.26,
+        "chars_count": 594,
+        "score": 75,
+        "sample": "Ek luxury modern penthouse poster ke liye, main aapko yeh 3 exact Hex color codes aur 1 display + body font pairing suggest karta hoon:\n\nColor Codes:\n"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 14994.58,
+        "chars_count": 2437,
+        "score": 50,
+        "sample": "Duniya bhar ke logon ko World Photography Day ke avsar par manana hai. Yahaan 6 alag angles ke saath punchy headlines di gayi hai:\n\n1. **Educational: "
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 7954.69,
+        "chars_count": 701,
+        "score": 50,
+        "sample": "Instagram ke liye 4:5 portrait carousel ke liye design karte samay yeh guidelines follow kare:\n\n**Canvas Dimensions:**\nInstagram ke liye 4:5 portrait "
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 7701.84,
+        "chars_count": 538,
+        "score": 25,
+        "sample": "Yeh hain 3 short, witty aur emotional Hinglish headlines ek organic Chai brand ke monsoon campaign ke liye:\n\n1. \"Rain ke saath, Pyaar bhi ho jaye. Har"
+      }
+    ]
+  },
+  "nvidia/llama-3.1-nemotron-nano-vl-8b-v1": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 7530.56,
+    "total_chars": 2579,
+    "avg_quality_score": 50.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 14100.02,
+        "chars_count": 908,
+        "score": 75,
+        "sample": "Sure, I'd be happy to help! Here are three Hex color codes and a font pairing suggestion for your luxury modern penthouse poster:\n\nHex Color Codes:\n\n1"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 5405.49,
+        "chars_count": 642,
+        "score": 50,
+        "sample": "1. **Educational:** \"Capture the World: A Visual Journey Through Photography Techniques.\"\n2. **Emotional:** \"Through the Lens of the Heart: Unveiling "
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 8202.56,
+        "chars_count": 806,
+        "score": 50,
+        "sample": "Sure, I'd be happy to help you with that! For an Instagram 4:5 portrait carousel, the canvas dimensions are 1080 pixels wide by 1920 pixels tall. Here"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 2414.16,
+        "chars_count": 223,
+        "score": 25,
+        "sample": "1. \"Monsoon mein, organic chai ke liye hero koi nahi, aise hi shuru hota hai!\"\n2. \"Monsoon ke aanchal mein, organic chai ke liye naya jahan banata hai"
+      }
+    ]
+  },
+  "meta/llama-3.1-70b-instruct": {
+    "success_rate": "0/4",
+    "avg_latency_ms": 99999,
+    "total_chars": 0,
+    "avg_quality_score": 0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "The read operation timed out"
+      }
+    ]
+  },
+  "mistralai/mistral-nemotron": {
+    "success_rate": "2/4",
+    "avg_latency_ms": 12920.77,
+    "total_chars": 3443,
+    "avg_quality_score": 62.5,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 13660.98,
+        "chars_count": 1751,
+        "score": 50,
+        "sample": "Here are six distinct angles with punchy headlines for **World Photography Day**, tailored to your specified themes:\n\n---\n\n### **1. Educational**\n**He"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 12180.57,
+        "chars_count": 1692,
+        "score": 75,
+        "sample": "Here are the **exact specifications** for an **Instagram 4:5 portrait carousel** (1080x1350px) with safe margins and typography recommendations:\n\n---\n"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "The read operation timed out"
+      }
+    ]
+  },
+  "poolside/laguna-xs-2.1": {
+    "success_rate": "3/4",
+    "avg_latency_ms": 2442.77,
+    "total_chars": 2780,
+    "avg_quality_score": 50.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 1737.98,
+        "chars_count": 402,
+        "score": 75,
+        "sample": "**Color Palette:**\n- Primary: `#0F172A` (Deep Navy)\n- Secondary: `#E0EAFF` (Soft White)\n- Accent: `#FFD700` (Golden)\n\n**Fonts:**\n- Display: **Montserr"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 4162.92,
+        "chars_count": 2170,
+        "score": 50,
+        "sample": "**1. Educational Angle: \"Capture the Story, Not Just the Shot\"**  \n*Headline:* **\"Master the Rule of Thirds in 10 Minutes — Here’s How to Make Every P"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 1427.4,
+        "chars_count": 208,
+        "score": 25,
+        "sample": "1. \"Monsoon ki hawa mein, chai ki pyaas bhi masaledaar ho jaye!\"  \n2. \"Barish ki boondein jaisi, kadak si chai – har pal ek nayi kahani.\"  \n3. \"Jab sa"
+      }
+    ]
+  },
+  "z-ai/glm-5.2": {
+    "success_rate": "2/4",
+    "avg_latency_ms": 12045.35,
+    "total_chars": 3631,
+    "avg_quality_score": 75.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 3562.81,
+        "chars_count": 189,
+        "score": 75,
+        "sample": "#0A0A0A (Obsidian Black)\n#1C1C1C (Charcoal)\n#D4AF37 (Metallic Gold)\n\n**Display Font:** Cormorant Garamond (High-contrast, elegant serif)\n**Body Font:*"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 20527.89,
+        "chars_count": 3442,
+        "score": 75,
+        "sample": "Here are 6 distinct strategic angles for World Photography Day, complete with punchy headlines and executional thought-starters. \n\n### 1. Educational\n"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "HTTP 429: {\"status\":429,\"title\":\"Too Many Requests\"}"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "HTTP 429: {\"status\":429,\"title\":\"Too Many Requests\"}"
+      }
+    ]
+  },
+  "nvidia/llama-3.3-nemotron-super-49b-v1": {
+    "success_rate": "1/4",
+    "avg_latency_ms": 20788.02,
+    "total_chars": 1284,
+    "avg_quality_score": 75.0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 20788.02,
+        "chars_count": 1284,
+        "score": 75,
+        "sample": "Chalo, aapke liye luxury modern penthouse poster ke liye 3 exact Hex color codes aur 1 display + body font pairing ka suggestion hain:\n\n### **Hex Colo"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "The read operation timed out"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "The read operation timed out"
+      }
+    ]
+  },
+  "meta/muse-glimmer-30b": {
+    "success_rate": "3/4",
+    "avg_latency_ms": 9537.04,
+    "total_chars": 2266,
+    "avg_quality_score": 58.33,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 8651.3,
+        "chars_count": 389,
+        "score": 75,
+        "sample": "**Luxury Modern Penthouse Palette**\n\n* **#0B0B0C** - Midnight Charcoal - background / text\n* **#F2EEE5** - Warm Linen - base / negative space\n* **#C5A"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 10096.35,
+        "chars_count": 1609,
+        "score": 75,
+        "sample": "**World Photography Day - 6 Creative Angles**\n\n### 1. Educational\n**Punchy Headline:** *Har Photo Ek Lesson Hai*\n\n**Angle:** Photography ko skill se s"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 9863.48,
+        "chars_count": 268,
+        "score": 25,
+        "sample": "Monsoon ke liye 3 sip-worthy headlines:\n\n**1. Baarish ke beech, ek garam hug.**  \nOrganic chai, dil se banayi hui.\n\n**2. Umbrella body ke liye, chai s"
+      }
+    ]
+  },
+  "openai/gpt-oss-120b": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 5754.27,
+    "total_chars": 4464,
+    "avg_quality_score": 62.5,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 4131.06,
+        "chars_count": 187,
+        "score": 75,
+        "sample": "**Hex colors**  \n- #0A0A0A (deep charcoal)  \n- #D4AF37 (rich gold)  \n- #FFFFFF (pure white)  \n\n**Font pairing**  \n- **Display:** Playfair Display (Bol"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 10256.38,
+        "chars_count": 2435,
+        "score": 75,
+        "sample": "**World Photography Day – 6 Distinct Creative Angles**  \n*(Har angle ke liye एक दम‑दार headline + quick‑hit idea)*  \n\n| # | Angle | Punchy Headline | "
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 5721.34,
+        "chars_count": 1591,
+        "score": 75,
+        "sample": "## Instagram 4:5 Portrait Carousel – Design Specs (Pixel‑Perfect)\n\n| Item | Value | Why it matters |\n|------|-------|----------------|\n| **Canvas (ful"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 2908.29,
+        "chars_count": 251,
+        "score": 25,
+        "sample": "**1.** “Barish ki boondein, organic chai ki har sip – health ka perfect combo!”\n\n**2.** “Monsoon ka magic, chai ka organic swag – sip karo, feel fresh"
+      }
+    ]
+  },
+  "nvidia/nemotron-3-ultra-550b-a55b": {
+    "success_rate": "3/4",
+    "avg_latency_ms": 8663.77,
+    "total_chars": 3450,
+    "avg_quality_score": 58.33,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 3078.59,
+        "chars_count": 378,
+        "score": 75,
+        "sample": "**Color Palette (Hex):**\n1. **Deep Charcoal:** `#1A1A2E` (Primary bg / Headlines)\n2. **Warm Champagne Gold:** `#D4AF37` (Accent / CTAs / Dividers)\n3. "
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 16066.16,
+        "chars_count": 2623,
+        "score": 75,
+        "sample": "**Executive Creative Director’s Deck: World Photography Day**\n*Brief: Stop celebrating the tool. Start celebrating the truth.*\n\n---\n\n### 1. EDUCATIONA"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "HTTP 503: {\"error\":{\"message\":\"Internal server error\",\"type\":\"Service Unavailable\",\"code\":503}}"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 6846.56,
+        "chars_count": 449,
+        "score": 25,
+        "sample": "**1.** *\"Barish organic hai, teri chai bhi honi chahiye.\"*  \n*(The rain is organic, your chai should be too.)*\n\n**2.** *\"Mitti ki khushboo, patte ka s"
+      }
+    ]
+  },
+  "nvidia/nemotron-3.5-lightning-30b-a3b": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 4629.66,
+    "total_chars": 9917,
+    "avg_quality_score": 62.5,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 6996.38,
+        "chars_count": 2296,
+        "score": 75,
+        "sample": "Here's a thinking process:\n\n1.  **Analyze User Request:**\n   - User wants: 3 exact hex color codes for a luxury modern penthouse poster\n   - Also want"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 4026.51,
+        "chars_count": 2830,
+        "score": 50,
+        "sample": "Here's a thinking process:\n\n1.  **Analyze User Request:**\n   - **Occasion:** World Photography Day\n   - **Task:** Output 6 distinct angles\n   - **Cate"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 4292.91,
+        "chars_count": 2609,
+        "score": 75,
+        "sample": "Here's a thinking process:\n\n1.  **Analyze User Request:**\n   - Platform: Instagram\n   - Format: 4:5 portrait carousel\n   - Requirements: Exact canvas "
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 3202.84,
+        "chars_count": 2182,
+        "score": 50,
+        "sample": "Here's a thinking process:\n\n1.  **Analyze User Request:**\n   - **Product:** Organic Chai brand\n   - **Campaign:** Monsoon campaign\n   - **Format:** 3 "
+      }
+    ]
+  },
+  "stepfun-ai/step-3.7-flash": {
+    "success_rate": "0/4",
+    "avg_latency_ms": 99999,
+    "total_chars": 0,
+    "avg_quality_score": 0,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      }
+    ]
+  },
+  "nvidia/nemotron-3-nano-30b-a3b": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 6957.64,
+    "total_chars": 2023,
+    "avg_quality_score": 56.25,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 5559.46,
+        "chars_count": 378,
+        "score": 75,
+        "sample": "**Hex palette**  \n- #212121   (deep charcoal)  \n- #C0C0C0   (soft metallic silver)  \n- #FFFFFF   (pure ivory)\n\n**Font pairing**  \n- **Display:** *Play"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 7157.98,
+        "chars_count": 829,
+        "score": 50,
+        "sample": "**World Photography Day – 6 Punchy Angles**\n\n| # | Angle | Headline (Punchy & Ready‑to‑Use) |\n|---|-------|-----------------------------------|\n| 1 | "
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 11389.03,
+        "chars_count": 642,
+        "score": 75,
+        "sample": "Instagram 4:5 portrait carousel ke liye exact canvas dimensions, padding margins in pixels, aur Headline + Body font sizes batao.\n\n**Canvas dimensions"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 3724.1,
+        "chars_count": 174,
+        "score": 25,
+        "sample": "1. **Monsoon Mein Masaledar, Organic Chai Ka Rishta**  \n2. **Barish Ki Dhoom, Sip Si Sathi – Pure Organic Chai**  \n3. **Thandi Raat, Garam Chai – Natu"
+      }
+    ]
+  },
+  "thinkingmachines/inkling": {
+    "success_rate": "2/4",
+    "avg_latency_ms": 8784.31,
+    "total_chars": 396,
+    "avg_quality_score": 37.5,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 7022.81,
+        "chars_count": 270,
+        "score": 75,
+        "sample": "**Colors (Luxury Modern Penthouse):**\n- `#0A0A0C` — Obsidian Black\n- `#C8A97E` — Champagne Gold\n- `#F2F0EB` — Warm Ivory\n\n**Font Pairing:**\n- **Displa"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 10545.81,
+        "chars_count": 126,
+        "score": 0,
+        "sample": "Yeh lo — monsoon ke liye 3 punchy Hinglish hooks, jismein barish ki bhigi si feeling aur organic ki purity dono mix hain:\n\n**1"
+      }
+    ]
+  },
+  "nvidia/riva-translate-4b-instruct-v1.1": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 828.81,
+    "total_chars": 464,
+    "avg_quality_score": 6.25,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 692.97,
+        "chars_count": 120,
+        "score": 0,
+        "sample": "Please suggest 3 exact Hex color codes (#...) and 1 display + body font pairing for a luxurious modern penthouse poster."
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 1172.13,
+        "chars_count": 107,
+        "score": 0,
+        "sample": "World Photography Day には 6 つの主要な視点があります: 1. 教育, 2. 感情, 3. ブランドにフォーカスしたもの, 4. ソーシャル, 5. インタラクティブ, 6. 3D 実験的。"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 699.74,
+        "chars_count": 133,
+        "score": 25,
+        "sample": "For Instagram 4:5 portrait carousel, here are the exact canvas dimensions, padding margins in pixels, and headline + body font sizes."
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 750.4,
+        "chars_count": 104,
+        "score": 0,
+        "sample": "Ek organic Chai brand ke monsoon campaign ke liye 3 short, witty aur emotional Hinglish headlines likho."
+      }
+    ]
+  },
+  "nvidia/riva-translate-4b-instruct-v2": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 931.49,
+    "total_chars": 510,
+    "avg_quality_score": 6.25,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 758.19,
+        "chars_count": 116,
+        "score": 0,
+        "sample": "Bhai, suggest 3 exact Hex color codes (#...) and 1 display + body font pairing for a luxury modern penthouse poster."
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 1382.07,
+        "chars_count": 143,
+        "score": 0,
+        "sample": "World Photography Day के लिए 6 अलग-अलग नज़रिया: 1. शिक्षात्मक, 2. भावनात्मक, 3. ब्रांड-फोकस्ड, 4. सामाजिक, 5. बातचीत आधारित, 6. 3D प्रयोगात्मक।"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 781.79,
+        "chars_count": 125,
+        "score": 25,
+        "sample": "Instagram 4:5 portrait carousel के लिए सही canvas dimensions, padding margins in pixels, और Headline + Body font sizes बताएं।"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 803.92,
+        "chars_count": 126,
+        "score": 0,
+        "sample": "As a translation expert, create 3 short, witty, and emotional Hinglish headlines for an organic Chai brand’s monsoon campaign."
+      }
+    ]
+  },
+  "nvidia/nvidia-nemotron-nano-9b-v2": {
+    "success_rate": "2/4",
+    "avg_latency_ms": 10951.04,
+    "total_chars": 963,
+    "avg_quality_score": 62.5,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 8774.06,
+        "chars_count": 128,
+        "score": 75,
+        "sample": "#1A1A2E (deep navy)  \n#4A4A4A (charcoal gray)  \n#D4AF37 (gold)  \n\nFonts:  \nDisplay - **Futura Bold**  \nBody - **Helvetica Neue**"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 13128.02,
+        "chars_count": 835,
+        "score": 50,
+        "sample": "Here are 6 distinct angles with punchy headlines for World Photography Day:  \n\n1. **Educational**  \n   *\"Unlock Your Lens: Master the Art of Storytell"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": false,
+        "error": "'NoneType' object has no attribute 'strip'"
+      }
+    ]
+  },
+  "nvidia/ising-calibration-1.5-31b": {
+    "success_rate": "4/4",
+    "avg_latency_ms": 1715.83,
+    "total_chars": 1187,
+    "avg_quality_score": 43.75,
+    "prompt_results": [
+      {
+        "prompt_id": "PROMPT_A_FAST_COPILOT",
+        "success": true,
+        "latency_ms": 1010.84,
+        "chars_count": 123,
+        "score": 50,
+        "sample": "#1A1A1A (Deep Charcoal) | #E5E5E5 (Soft White) | #C0C0C0 (Silver Accent) | Font Pairing: Montserrat (Display) + Lato (Body)"
+      },
+      {
+        "prompt_id": "PROMPT_B_HEAVY_REASONING",
+        "success": true,
+        "latency_ms": 2481.86,
+        "chars_count": 601,
+        "score": 50,
+        "sample": "1. Educational: \"Unlock the secrets of perfect exposure — join our masterclass on World Photography Day!\"\n2. Emotional: \"Every photo tells a story; le"
+      },
+      {
+        "prompt_id": "PROMPT_C_FIGMA_SPECS",
+        "success": true,
+        "latency_ms": 1315.43,
+        "chars_count": 112,
+        "score": 50,
+        "sample": "Canvas: 1080 x 1350 px\nPadding: Top 160 px, Bottom 160 px, Left 160 px, Right 160 px\nHeadline: 56 px\nBody: 40 px"
+      },
+      {
+        "prompt_id": "PROMPT_D_DESI_COPYWRITING",
+        "success": true,
+        "latency_ms": 2055.2,
+        "chars_count": 351,
+        "score": 25,
+        "sample": "1. \"Jab baarish hoti hai, humari chai ki khushbu aur bhi gehrai le leti hai — kyunki asliyat kabhi dilute nahi hoti.\"\n\n2. \"Monsoon mein chai ka ek cup"
+      }
+    ]
+  }
+}
