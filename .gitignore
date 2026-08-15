@@ -37,7 +37,9 @@ desktop.ini
 
 # Python Cache & Virtual Environments
 __pycache__/
-*.py[cod]
+# IDE & Editor
+.vscode/
+.idea/
 .venv/
 env/
 venv/
