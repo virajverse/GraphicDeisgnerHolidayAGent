@@ -141,6 +141,28 @@ const db = {
           memCache.users.set(userObj.id, userObj);
         }
 
+        // In-Memory Fast Sync for user updates
+        if (sql.includes('UPDATE users')) {
+          if (sql.includes('is_banned = 1') || sql.includes("verification_status = 'BANNED'")) {
+            const chatId = args[0]?.toString();
+            for (const u of memCache.users.values()) {
+              if (u.telegram_chat_id === chatId) {
+                u.is_banned = 1;
+                u.verification_status = 'BANNED';
+              }
+            }
+          } else if (sql.includes('is_banned = 0') || sql.includes("verification_status = 'APPROVED'")) {
+            const chatId = args[0]?.toString();
+            for (const u of memCache.users.values()) {
+              if (u.telegram_chat_id === chatId) {
+                u.is_banned = 0;
+                u.verification_status = 'APPROVED';
+                u.is_approved = 1;
+              }
+            }
+          }
+        }
+
         if (sql.includes('INTO system_settings') || sql.includes('UPDATE system_settings')) {
           const key = args[0];
           const value = args[1];
@@ -191,6 +213,9 @@ export async function initDatabase() {
       telegram_chat_id TEXT UNIQUE,
       is_approved INTEGER DEFAULT 1,
       role TEXT DEFAULT 'DESIGNER',
+      verification_status TEXT DEFAULT 'APPROVED',
+      is_banned INTEGER DEFAULT 0,
+      ban_reason TEXT,
       registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -328,4 +353,5 @@ export async function initDatabase() {
 // Auto-run schema sync
 initDatabase().catch(() => {});
 
+export { db };
 export default db;

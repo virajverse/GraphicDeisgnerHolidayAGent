@@ -7,7 +7,7 @@ import { initTelegramBot, handleUpcomingCommand, handleTodayCommand, handleOnDem
 import { initScheduler, runEventCheckAndAlert } from './services/scheduler.js';
 import fileDirName from './utils/fileDir.js';
 import { executeMultiSourceScrape } from './services/webScraperEngine.js';
-import { EventRecord, ClientRecord, AlertRecord, CreativeIdeaRecord } from './types/database.js';
+import { EventRecord, ClientRecord, AlertRecord, CreativeIdeaRecord, UserRecord } from './types/database.js';
 
 dotenv.config();
 
@@ -159,6 +159,45 @@ app.post(['/api/clients', '/clients'], (req: Request, res: Response) => {
   `).run(id, 'default_user', name, industry, audience || 'General', brand_tone || 'Professional', creative_style || 'Minimal');
 
   res.json({ success: true, id, message: 'Client profile saved.' });
+});
+
+// Get All Registered Users (Including Banned & Pending Status)
+app.get(['/api/admin/users', '/admin/users'], (req: Request, res: Response) => {
+  const users: UserRecord[] = db.prepare('SELECT * FROM users ORDER BY registered_at DESC').all();
+  res.json({ success: true, count: users.length, users });
+});
+
+// Admin Unban User via Web API
+app.post(['/api/admin/unban', '/admin/unban'], async (req: Request, res: Response) => {
+  const { chatId } = req.body;
+  if (!chatId) return res.status(400).json({ success: false, error: 'chatId is required' });
+
+  db.prepare(`
+    UPDATE users SET is_banned = 0, verification_status = 'APPROVED', is_approved = 1
+    WHERE telegram_chat_id = ?
+  `).run(chatId.toString());
+
+  // Notify user via Telegram if bot is initialized
+  try {
+    if (telegramBot) {
+      await telegramBot.sendMessage(chatId, `🎉 *CONGRATULATIONS! YOUR ACCOUNT HAS BEEN UNBANNED!*\n\nSuper Admin ne aapka account review karke unban kar diya hai!\n\n🚀 *Aapka Taliyo Creative Intelligence AI Agent wapas 100% active ho chuka hai!*`, { parse_mode: 'Markdown' });
+    }
+  } catch (e) {}
+
+  res.json({ success: true, message: `User ${chatId} unbanned successfully.` });
+});
+
+// Admin Ban User via Web API
+app.post(['/api/admin/ban', '/admin/ban'], async (req: Request, res: Response) => {
+  const { chatId, reason } = req.body;
+  if (!chatId) return res.status(400).json({ success: false, error: 'chatId is required' });
+
+  db.prepare(`
+    UPDATE users SET is_banned = 1, verification_status = 'BANNED', ban_reason = ?
+    WHERE telegram_chat_id = ?
+  `).run(reason || 'Manual Admin Ban', chatId.toString());
+
+  res.json({ success: true, message: `User ${chatId} banned successfully.` });
 });
 
 // Telegram Webhook Endpoint (For Vercel Serverless Production with Secret Token Auth)

@@ -26,6 +26,51 @@ const COOLDOWN_MS = 4000;
 // Double-Tap Blocker (In-Flight Request Tracker)
 const activeProcessingUsers = new Set<string>();
 
+// Rapid Flood / Intentional Spam Strike Tracker
+const spamStrikeTracker = new Map<string, { timestamps: number[]; strikes: number }>();
+
+function checkSpamAndBanStatus(chatId: string | number): { isBanned: boolean; isWarning: boolean; strikeCount: number } {
+  const strId = chatId.toString();
+  const now = Date.now();
+
+  // 1. Check Permanent Database Ban Status
+  const user: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strId);
+  if (user && (user.is_banned === 1 || user.verification_status === 'BANNED')) {
+    return { isBanned: true, isWarning: false, strikeCount: 3 };
+  }
+
+  // 2. Sliding Window Rapid Flood Tracker (Last 10 Seconds)
+  let tracker = spamStrikeTracker.get(strId);
+  if (!tracker) {
+    tracker = { timestamps: [], strikes: 0 };
+    spamStrikeTracker.set(strId, tracker);
+  }
+
+  // Filter timestamps within last 10 seconds
+  tracker.timestamps = tracker.timestamps.filter(t => now - t < 10000);
+  tracker.timestamps.push(now);
+
+  // If user sends > 5 requests within 10 seconds:
+  if (tracker.timestamps.length > 5) {
+    tracker.strikes += 1;
+    tracker.timestamps = []; // Reset window for next strike calculation
+
+    // Strike 3: INTENTIONAL SPAM DETECTED -> PERMANENT BAN
+    if (tracker.strikes >= 3) {
+      db.prepare(`
+        UPDATE users SET is_banned = 1, verification_status = 'BANNED', ban_reason = 'Intentional rapid flooding / DDoS attempt'
+        WHERE telegram_chat_id = ?
+      `).run(strId);
+
+      return { isBanned: true, isWarning: false, strikeCount: 3 };
+    }
+
+    return { isBanned: false, isWarning: true, strikeCount: tracker.strikes };
+  }
+
+  return { isBanned: false, isWarning: false, strikeCount: tracker.strikes };
+}
+
 // Anti-Brute Force Passcode Tracker
 const bruteForceTracker = new Map<string, { attempts: number; lockedUntil: number }>();
 
@@ -538,6 +583,14 @@ export async function handleTelegramWebhookUpdate(update: any) {
     const chatId = query.message.chat.id;
     const data = query.data;
 
+    const banCheck = checkSpamAndBanStatus(chatId);
+    if (banCheck.isBanned) {
+      return await botInstance.answerCallbackQuery(query.id, {
+        text: '⛔ ACCOUNT BANNED. Contact @virajverse to unban.',
+        show_alert: true
+      }).catch(() => {});
+    }
+
     // Cooldown check for button spammers
     const cooldown = checkUserCooldown(chatId);
     if (!cooldown.allowed) {
@@ -763,6 +816,26 @@ export async function handleTelegramWebhookUpdate(update: any) {
     const msg: TelegramBot.Message = update.message;
     const text = msg.text ? msg.text.trim() : '';
     const chatId = msg.chat.id;
+    const strChatId = chatId.toString();
+
+    // Check Permanent Ban & Rapid Spam Flood Status
+    const banCheck = checkSpamAndBanStatus(chatId);
+    if (banCheck.isBanned) {
+      if (strChatId !== MASTER_ADMIN_CHAT_ID) {
+        const lockoutMsg = `⛔ *ACCOUNT PERMANENTLY BANNED / LOCKED OUT*\n\n` +
+          `Aapka account rapid flooding / intentional spam / DDoS violation ke karan permanently ban kar diya gaya hai.\n\n` +
+          `🔒 *Aapka access tabhi restore hoga jab Super Admin panel se unban karega.*\n` +
+          `👉 Support & Verification: *@virajverse*`;
+        return await sendSafeTelegramMessage(chatId, lockoutMsg);
+      }
+    }
+
+    if (banCheck.isWarning) {
+      const warningMsg = `⚠️ *SECURITY WARNING (Strike ${banCheck.strikeCount}/3)*\n\n` +
+        `Aap bohot tezi se requests bhej rahe hain! Please 5-10 second rukiye.\n\n` +
+        `🚨 *Warning:* 3 strikes par aapka account **permanently ban** ho jayega aur sirf Admin panel se hi unban hoga!`;
+      return await sendSafeTelegramMessage(chatId, warningMsg);
+    }
 
     // Check Onboarding State Machine (Step 1: Capturing Name, Instagram & YouTube)
     const obState = onboardingTracker.get(chatId.toString());
@@ -1016,6 +1089,57 @@ export async function handleTelegramWebhookUpdate(update: any) {
           await sendSafeTelegramMessage(targetId, welcomeApproved, { reply_markup: DESIGNER_KEYBOARD });
           return await sendSafeTelegramMessage(chatId, `✅ Designer \`${targetId}\` has been approved successfully!`);
         }
+      }
+
+      if (text.startsWith('/unban')) {
+        const targetId = text.replace('/unban', '').trim();
+        if (!targetId) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/unban CHAT_ID\`\n*(Example: \`/unban 123456789\`)*`);
+        }
+        db.prepare(`
+          UPDATE users SET is_banned = 0, verification_status = 'APPROVED', is_approved = 1
+          WHERE telegram_chat_id = ?
+        `).run(targetId);
+
+        spamStrikeTracker.delete(targetId);
+        activeProcessingUsers.delete(targetId);
+        userCooldownTracker.delete(targetId);
+
+        const unbannedMsg = `🎉 *CONGRATULATIONS! YOUR ACCOUNT HAS BEEN UNBANNED!*\n\n` +
+          `Super Admin *@virajverse* ne aapka account unban karke access restore kar diya hai!\n\n` +
+          `🚀 *Aapka Taliyo Creative Intelligence AI Agent wapas 100% active ho chuka hai!*\n` +
+          `Niche diye gaye buttons se shuru karein:`;
+        
+        await sendSafeTelegramMessage(targetId, unbannedMsg, { reply_markup: DESIGNER_KEYBOARD });
+        return await sendSafeTelegramMessage(chatId, `✅ *User Unbanned Successfully:*\n• Chat ID: \`${targetId}\`\n• Status: 🟢 Fully restored & notified!`);
+      }
+
+      if (text.startsWith('/ban')) {
+        const targetId = text.replace('/ban', '').trim();
+        if (!targetId) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/ban CHAT_ID\`\n*(Example: \`/ban 123456789\`)*`);
+        }
+        db.prepare(`
+          UPDATE users SET is_banned = 1, verification_status = 'BANNED', ban_reason = 'Admin Manual Ban'
+          WHERE telegram_chat_id = ?
+        `).run(targetId);
+
+        const banNotice = `⛔ *SECURITY LOCKOUT: ACCOUNT PERMANENTLY BANNED!*\n\nAapka account Super Admin dwara ban kar diya gaya hai.\n\n🔒 *Sirf Super Admin ke unban karne par hi aapka access restore hoga.*`;
+        await sendSafeTelegramMessage(targetId, banNotice);
+        return await sendSafeTelegramMessage(chatId, `⛔ *User Banned Successfully:*\n• Chat ID: \`${targetId}\`\n• Status: 🔴 Permanently locked out.`);
+      }
+
+      if (text === '⛔ Banned Users' || text === '/banned') {
+        const bannedUsers: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_banned = 1 OR verification_status = "BANNED"').all();
+        if (bannedUsers.length === 0) {
+          return await sendSafeTelegramMessage(chatId, `✅ *BANNED USERS LIST*\n\nAbhi koi banned user nahi hai. Sabhi designers active aur safe hain!`);
+        }
+        let list = `⛔ *CURRENTLY BANNED USERS (${bannedUsers.length})*\n\n`;
+        bannedUsers.forEach((u, i) => {
+          list += `${i + 1}. *${u.name}* (@${u.username || 'n/a'})\n   • Chat ID: \`${u.telegram_chat_id}\`\n   • Reason: _${u.ban_reason || 'Automated DDoS / Rapid Spam'}\_\n\n`;
+        });
+        list += `👉 Unban karne ke liye type karein:\n\`/unban CHAT_ID\``;
+        return await sendSafeTelegramMessage(chatId, list);
       }
 
       if (text.startsWith('/setgroup')) {

@@ -17,7 +17,9 @@ export interface UserRecord {
   telegram_chat_id: string;
   is_approved: number;
   role: 'ADMIN' | 'DESIGNER';
-  verification_status?: 'APPROVED' | 'PENDING' | 'REJECTED';
+  verification_status?: 'APPROVED' | 'PENDING' | 'REJECTED' | 'BANNED';
+  is_banned?: number;
+  ban_reason?: string;
   verification_screenshot_id?: string;
   instagram_handle?: string;
   registered_at?: string;
