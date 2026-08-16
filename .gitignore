@@ -37,19 +37,27 @@ desktop.ini
 
 # Python Cache & Virtual Environments
 __pycache__/
-# IDE & Editor
 .vscode/
 .idea/
 .venv/
 env/
 venv/
 
-# Goku & Large Media Sequences (Strictly Ignored)
+# Goku Workspace & Raw Media (Strictly Ignored)
 goku edit/
 *goku*
 public/goku*
-public/frames*
-public/*.zip
+public/frames_goku*
 *.mp4
-h.txt
+*.zip
+
+# Test Scripts, Benchmark Matrix & Audit Reports
 test/
+h.txt
+audit_live_system_report.txt
+benchmark_27_models_matrix.json
+benchmark_27_models_report.txt
+benchmark_llm_speed.py
+check_all_102_nvidia_models.py
+nvidia_models_audit_report.json
+nvidia_models_strengths.txt
