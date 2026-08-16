@@ -11,12 +11,13 @@ import { scrapeInstagramProfile } from './instagramScraperEngine.js';
 import { agentQueue } from './requestQueueEngine.js';
 import { pruneDatabaseCache } from './dbPruner.js';
 import { runEventCheckAndAlert } from './scheduler.js';
-import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord } from '../types/database.js';
+import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord } from '../types/database.js';
 import { EventContext, IdeationResult } from '../types/models.js';
 
 const ADMIN_CODE = process.env.ADMIN_INVITE_CODE || 'TALIYO2026';
 const ADMIN_HANDLE = process.env.ADMIN_TELEGRAM_HANDLE || '@virajverse';
 const MASTER_ADMIN_CHAT_ID = (process.env.TELEGRAM_DEFAULT_CHAT_ID || '1634951702').toString();
+const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'GraphicDeisgnerHolidayAGent_bot';
 
 let botInstance: TelegramBot | null = null;
 
@@ -98,7 +99,7 @@ export const DESIGNER_KEYBOARD = {
   keyboard: [
     [{ text: '⚡ Auto Radar Brief' }, { text: '🗓️ Full Calendar' }],
     [{ text: '🎨 Art Director Co-Pilot' }, { text: '💼 Client Profiles' }],
-    [{ text: '💡 Custom Prompt' }, { text: '👤 My Activity' }],
+    [{ text: '🎁 Invite & Earn' }, { text: '👤 My Activity' }],
     [{ text: '🌐 Language (EN/Hinglish)' }, { text: '📖 Guide & Support' }]
   ],
   resize_keyboard: true,
@@ -117,10 +118,11 @@ export const DESIGNER_INLINE_HUB = {
       { text: '💼 Client Profiles', callback_data: 'cmd_clients' }
     ],
     [
-      { text: '👤 My Activity', callback_data: 'cmd_activity' },
-      { text: '🌐 Language Switch', callback_data: 'cmd_lang' }
+      { text: '🎁 Invite & Earn', callback_data: 'cmd_referral' },
+      { text: '👤 My Activity', callback_data: 'cmd_activity' }
     ],
     [
+      { text: '🌐 Language Switch', callback_data: 'cmd_lang' },
       { text: '📖 Guide & Support', callback_data: 'cmd_guide' }
     ]
   ]
@@ -141,7 +143,10 @@ export const ADMIN_INLINE_HUB = {
       { text: '👥 Community Ground', callback_data: 'adm_ground' }
     ],
     [
-      { text: '⛔ Banned Users', callback_data: 'adm_banned' },
+      { text: '🏆 Top Referrers', callback_data: 'adm_referrals' },
+      { text: '⛔ Banned Users', callback_data: 'adm_banned' }
+    ],
+    [
       { text: '📊 Deep Telemetry', callback_data: 'adm_telemetry' }
     ]
   ]
@@ -161,7 +166,8 @@ export const ADMIN_MASTER_KEYBOARD = {
     [{ text: '👑 Admin Control' }, { text: '👥 Active Designers' }],
     [{ text: '🔔 Pending Approvals' }, { text: '🚀 Trigger Radar Scan' }],
     [{ text: '📢 Broadcast Hub' }, { text: '👥 Community Ground' }],
-    [{ text: '⛔ Banned Users' }, { text: '📊 Deep AI Telemetry' }]
+    [{ text: '🏆 Top Referrers' }, { text: '⛔ Banned Users' }],
+    [{ text: '📊 Deep AI Telemetry' }, { text: '🎁 Invite & Earn' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -235,9 +241,15 @@ export async function sendSafeTelegramMessage(chatId: string | number, text: str
   } catch (err: any) {
     if (err.message && err.message.includes("can't parse entities")) {
       const plainText = text.replace(/[*_`[\]()]/g, '');
-      return await botInstance.sendMessage(chatId, plainText, { ...options, parse_mode: undefined });
+      try {
+        return await botInstance.sendMessage(chatId, plainText, { ...options, parse_mode: undefined });
+      } catch (innerErr: any) {
+        console.warn(`[Telegram Delivery Warn] Could not send to ${chatId}: ${innerErr.message}`);
+        return null;
+      }
     }
-    throw err;
+    console.warn(`[Telegram Delivery Warn] Could not send message to ${chatId}: ${err.message}`);
+    return null;
   }
 }
 
@@ -368,6 +380,117 @@ export function exportDPOTrainingDataset(): { buffer: Buffer; count: number; fil
   const filename = `taliyo_dpo_dataset_${Date.now()}.jsonl`;
 
   return { buffer, count: jsonlLines.length, filename };
+}
+
+/**
+ * 🎁 Designer Referral Hub (Invite & Earn System)
+ */
+export async function handleReferralHub(chatId: string | number) {
+  const strChatId = chatId.toString();
+  const user: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId) || {
+    name: 'Designer',
+    referral_count: 0,
+    referral_credits: 0,
+    referral_tier: 'BRONZE'
+  };
+
+  const referralCount = user.referral_count || 0;
+  const referralCredits = user.referral_credits || 0;
+  
+  // Calculate tier & progression
+  let tierName = '🥉 BRONZE DESIGNER';
+  let nextTierText = '5 referrals (Silver Tier)';
+  let tierPerks = '• 50 AI Credits per friend\n• Standard Priority Queue';
+  
+  if (referralCount >= 30) {
+    tierName = '💎 DIAMOND MASTER';
+    nextTierText = 'MAX TIER REACHED!';
+    tierPerks = '• 250 AI Credits per friend\n• Instant 0-Second VIP Queue\n• Direct Admin VIP Line & Custom Features';
+  } else if (referralCount >= 15) {
+    tierName = '🥇 GOLD DESIGNER';
+    nextTierText = `${30 - referralCount} more for Diamond Tier`;
+    tierPerks = '• 200 AI Credits per friend\n• VIP Ahead-of-Time Early Briefs\n• Priority GPU Acceleration';
+  } else if (referralCount >= 5) {
+    tierName = '🥈 SILVER DESIGNER';
+    nextTierText = `${15 - referralCount} more for Gold Tier`;
+    tierPerks = '• 100 AI Credits per friend\n• Enhanced Queue Speed\n• 6 Extra Idea Angles per brief';
+  } else {
+    nextTierText = `${5 - referralCount} more for Silver Tier`;
+  }
+
+  const inviteLink = `https://t.me/${BOT_USERNAME}?start=ref_${strChatId}`;
+  const shareText = `🎨 Join Taliyo Creative Intelligence AI Agent!\nGet ahead-of-time festival design briefs, color palettes & 6 ready-to-design concepts for Photoshop/Figma!\n\n👉 Join via my VIP invite link: ${inviteLink}`;
+  const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
+
+  // Fetch recent referrals
+  const recentRefs: ReferralRecord[] = db.prepare('SELECT * FROM referrals WHERE referrer_chat_id = ? ORDER BY created_at DESC LIMIT 5').all(strChatId);
+  let refListText = '';
+  if (recentRefs && recentRefs.length > 0) {
+    refListText = `\n👥 *RECENTLY JOINED FRIENDS:*\n`;
+    recentRefs.forEach((r, i) => {
+      refListText += `${i + 1}. *${r.referred_name || 'Designer'}* (@${r.referred_username || 'n/a'}) — _+${r.credits_awarded} Credits_\n`;
+    });
+  }
+
+  const referralMessage = `🎁 *TALIYO DESIGNER INVITE & EARN HUB*\n\n` +
+    `Apne graphic designer dosto ko invite karein aur **Free AI Credits, VIP GPU Queue & Tier Rewards** unlock karein!\n\n` +
+    `🔗 *YOUR UNIQUE INVITE LINK:*\n` +
+    `\`${inviteLink}\`\n\n` +
+    `📊 *YOUR REFERRAL STATS:*\n` +
+    `• *Total Friends Referred:* **${referralCount} Designers**\n` +
+    `• *Earned AI Credits:* **${referralCredits} Credits**\n` +
+    `• *Current Rank Tier:* **${tierName}**\n` +
+    `• *Next Milestone:* _${nextTierText}_\n\n` +
+    `🏆 *TIER REWARDS & PERKS:*\n${tierPerks}\n` +
+    refListText +
+    `\n👇 *Share karne ke liye niche button tap karein:*`;
+
+  const referralInlineKeyboard = {
+    inline_keyboard: [
+      [
+        { text: '📲 Share to Friends / Groups', url: telegramShareUrl }
+      ],
+      [
+        { text: '🏆 Top Leaderboard', callback_data: 'adm_referrals' },
+        { text: '⚡ Back to AI Studio', callback_data: 'menu_continue' }
+      ]
+    ]
+  };
+
+  return await sendSafeTelegramMessage(chatId, referralMessage, { reply_markup: referralInlineKeyboard });
+}
+
+/**
+ * 🏆 Top Community Referrers Leaderboard
+ */
+export async function handleTopReferrers(chatId: string | number) {
+  const topUsers: UserRecord[] = db.prepare('SELECT * FROM users ORDER BY referral_count DESC LIMIT 10').all();
+  
+  let msg = `🏆 *TALIYO COMMUNITY REFERRAL LEADERBOARD*\n\n` +
+    `Top designers who have invited the most peers to Taliyo Creative Intelligence:\n\n`;
+
+  const activeReferrers = topUsers.filter(u => (u.referral_count || 0) > 0);
+
+  if (!activeReferrers || activeReferrers.length === 0) {
+    msg += `_Abhi koi referrals nahi hain. Pehle designer banein aur apne dosto ko invite karein!_\n\n` +
+      `👉 Apna invite link paane ke liye */invite* type karein.`;
+  } else {
+    activeReferrers.forEach((u, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🎖️';
+      const tierBadge = u.referral_tier || 'BRONZE';
+      msg += `${medal} *#0${i + 1} ${u.name}* (@${u.username || 'n/a'})\n   • Referrals: *${u.referral_count || 0}* | Credits: *${u.referral_credits || 0}* | Tier: \`${tierBadge}\`\n\n`;
+    });
+  }
+
+  msg += `\n🎁 *Aap bhi invite karein:* Type */invite* or tap button below:`;
+
+  return await sendSafeTelegramMessage(chatId, msg, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '🎁 Get My Invite Link', callback_data: 'cmd_referral' }]
+      ]
+    }
+  });
 }
 
 function getDaysRemaining(eventDateMMDD: string): number {
@@ -839,6 +962,12 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `2️⃣ *Visual Specs:* Get exact Hex Colors & Font Pairings with 1 tap.\n` +
         `3️⃣ *Client Isolation:* Every designer's brand guidelines stay private.`;
       return await sendSafeTelegramMessage(chatId, helpMsg, { reply_markup: DESIGNER_INLINE_HUB });
+    } else if (data === 'cmd_referral') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🎁 Opening Referral Hub...' }).catch(() => {});
+      return await handleReferralHub(chatId);
+    } else if (data === 'adm_referrals') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🏆 Loading Referral Leaderboard...' }).catch(() => {});
+      return await handleTopReferrers(chatId);
     }
 
     // 👑 ADMIN INLINE ACTION HANDLERS
@@ -1161,13 +1290,62 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }
     }
 
+    // Handle deep-link referral detection on /start ref_XXXX
+    if (text.startsWith('/start')) {
+      const parts = text.split(/\s+/);
+      if (parts[1] && parts[1].startsWith('ref_')) {
+        const referrerId = parts[1].replace('ref_', '').trim();
+        const existingUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId);
+        
+        if (!existingUser && referrerId && referrerId !== strChatId) {
+          const referrer: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(referrerId);
+          if (referrer) {
+            // Save referrer association in onboarding tracker
+            const ob = onboardingTracker.get(strChatId) || { step: 'WAITING_DETAILS' };
+            (ob as any).referredBy = referrerId;
+            onboardingTracker.set(strChatId, ob);
+
+            // Record referral and give credits
+            const bonusCredits = 50;
+            const newRefCount = (referrer.referral_count || 0) + 1;
+            const newCredits = (referrer.referral_credits || 0) + bonusCredits;
+            
+            let newTier: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND' = 'BRONZE';
+            if (newRefCount >= 30) newTier = 'DIAMOND';
+            else if (newRefCount >= 15) newTier = 'GOLD';
+            else if (newRefCount >= 5) newTier = 'SILVER';
+
+            db.prepare(`
+              UPDATE users SET referral_count = ?, referral_credits = ?, referral_tier = ?
+              WHERE telegram_chat_id = ?
+            `).run(newRefCount, newCredits, newTier, referrerId);
+
+            db.prepare(`
+              INSERT INTO referrals (id, referrer_chat_id, referred_chat_id, referred_name, referred_username, credits_awarded)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `).run(`ref_${Date.now()}_${strChatId}`, referrerId, strChatId, msg.from?.first_name || 'New Designer', msg.from?.username || '', bonusCredits);
+
+            // Send real-time notification to referrer
+            const referrerNotice = `🎉 *NEW DESIGNER JOINED VIA YOUR VIP LINK!*\n\n` +
+              `• *Referred Designer:* *${msg.from?.first_name || 'Designer'}* (@${msg.from?.username || 'n/a'})\n` +
+              `• *Reward:* 💰 *+${bonusCredits} AI Credits Added!*\n` +
+              `• *Total Referrals:* **${newRefCount} Designers**\n` +
+              `• *Current Tier:* **${newTier}**\n\n` +
+              `Keep inviting peers to unlock Gold & Diamond VIP Perks!`;
+            
+            await sendSafeTelegramMessage(referrerId, referrerNotice).catch(() => {});
+          }
+        }
+      }
+    }
+
     // Unauthenticated user barrier -> Send Access Gateway Card
     if (!auth.authorized) {
       return await sendAccessGatewayCard(chatId);
     }
 
     // Check Cooldown for rapid tapping / spamming
-    if (text !== '/start' && text.toLowerCase() !== 'start' && !text.startsWith('/register')) {
+    if (!text.startsWith('/start') && text.toLowerCase() !== 'start' && !text.startsWith('/register') && !text.startsWith('/invite') && !text.startsWith('/referral')) {
       const cd = checkUserCooldown(chatId);
       if (!cd.allowed) {
         return await sendSafeTelegramMessage(chatId, `⏳ *Cooling Period Active:* Please wait *${cd.remainingSec}s* before tapping another button.`);
@@ -1536,6 +1714,27 @@ export async function handleTelegramWebhookUpdate(update: any) {
         return;
       }
 
+      if (text === '🏆 Top Referrers' || text === '/topreferrers' || text === '/leaderboard') {
+        return await handleTopReferrers(chatId);
+      }
+
+      if (text.startsWith('/addcredits')) {
+        const parts = text.replace('/addcredits', '').trim().split(/\s+/);
+        if (parts.length < 2) {
+          return await sendSafeTelegramMessage(chatId, `⚠️ *Format:* \`/addcredits CHAT_ID AMOUNT\`\n*(Example: \`/addcredits 123456789 200\`)*`);
+        }
+        const [targetId, amountStr] = parts;
+        const amount = parseInt(amountStr, 10) || 0;
+        const targetUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(targetId);
+        if (!targetUser) {
+          return await sendSafeTelegramMessage(chatId, `❌ User with Chat ID \`${targetId}\` not found.`);
+        }
+        const newCredits = (targetUser.referral_credits || 0) + amount;
+        db.prepare('UPDATE users SET referral_credits = ? WHERE telegram_chat_id = ?').run(newCredits, targetId);
+        await sendSafeTelegramMessage(targetId, `🎁 *CREDITS AWARDED:* Admin ne aapko *+${amount} AI Credits* gift kiye hain! Total Balance: *${newCredits} Credits*.`);
+        return await sendSafeTelegramMessage(chatId, `✅ Successfully added *+${amount} Credits* to user \`${targetId}\`. Total: ${newCredits}.`);
+      }
+
       if (text === '🧹 Prune Cloud Cache') {
         const pruneRes = pruneDatabaseCache(30);
         return await sendSafeTelegramMessage(chatId, `🧹 *Cloud Cache Pruned:* Removed old telemetry logs beyond ${pruneRes.retentionDays} days.`);
@@ -1548,11 +1747,20 @@ export async function handleTelegramWebhookUpdate(update: any) {
         ? `👑 *Welcome Master Admin (@virajverse)!*\n\nYour Super Admin Master Control Dashboard is active. Use the docked admin keypad below for controls or send any creative design prompt!`
         : `🤖 *Hey ${msg.from?.first_name || 'Designer'}! Welcome to Taliyo Creative Intelligence*\n\n` +
           `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
+          `🎁 *Invite & Earn Active:* Apne designer dosto ko invite karein aur **Free AI Credits & VIP Queue** unlock karein!\n\n` +
           `👇 *Use the persistent menu buttons below your typing box for 1-tap navigation, or type any prompt naturally!*`;
       
       return await sendSafeTelegramMessage(chatId, welcome, {
         reply_markup: getUserKeyboard(chatId)
       });
+    }
+
+    if (text === '🎁 Invite & Earn' || text === '/invite' || text === '/referral' || text === '/earn' || text === '🎁 Referral Hub') {
+      return await handleReferralHub(chatId);
+    }
+
+    if (text === '🏆 Top Referrers' || text === '/topreferrers' || text === '/leaderboard') {
+      return await handleTopReferrers(chatId);
     }
 
     if (text === '/contact' || text === '💬 Contact Admin') {

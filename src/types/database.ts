@@ -22,8 +22,22 @@ export interface UserRecord {
   ban_reason?: string;
   verification_screenshot_id?: string;
   instagram_handle?: string;
+  referred_by?: string;
+  referral_count?: number;
+  referral_credits?: number;
+  referral_tier?: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND';
   registered_at?: string;
   updated_at?: string;
+}
+
+export interface ReferralRecord {
+  id: string;
+  referrer_chat_id: string;
+  referred_chat_id: string;
+  referred_name?: string;
+  referred_username?: string;
+  credits_awarded: number;
+  created_at?: string;
 }
 
 export interface ClientRecord {

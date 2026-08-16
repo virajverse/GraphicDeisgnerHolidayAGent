@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DesignOS — Autonomous Creative Intelligence for Design Directors</title>
+  <meta name="description" content="DesignOS is a deterministic creative intelligence platform. Ingests raw project briefs and synthesizes 5 to 6 distinct, culturally anchored design systems with complete strategic rationale." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- BACKGROUND SUBTLE GRID -->
+  <div class="canvas-grid-bg" aria-hidden="true"></div>
+
+  <!-- NAVIGATION -->
+  <header id="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-brand">
+        <span class="brand-glyph">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18M9 21V9" />
+          </svg>
+        </span>
+        <span class="brand-name">Design<span class="text-accent">OS</span></span>
+        <span class="status-indicator">SYSTEM 2.6 PRO</span>
+      </a>
+
+      <nav class="nav-menu">
+        <a href="#hero-spatial" class="nav-link">01 // Anatomy</a>
+        <a href="#silicon-cockpit" class="nav-link">02 // Silicon</a>
+        <a href="#drafting-lab" class="nav-link">03 // Blueprint</a>
+        <a href="#metamorphosis-studio" class="nav-link">04 // Synthesis Studio</a>
+        <a href="goku.html" class="nav-link" style="color: var(--accent-cyan);">⚡ Goku 60FPS</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="goku.html" class="nav-btn-secondary">Goku 60FPS Player</a>
+        <a href="#access" class="nav-btn-primary">Request Access</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       SECTION 01: HERO — SPATIAL HARDWARE ANATOMY (PINNED SCROLL)
+       ========================================================================== -->
+  <section id="hero-spatial" class="scroll-story-section">
+    <div class="sticky-viewport">
+      
+      <div class="story-telemetry">
+        <div class="t-left">
+          <span class="t-pulse"></span>
+          <span class="t-label">MODULE 01 // SPATIAL HARDWARE ANATOMY</span>
+        </div>
+        <div class="t-right">
+          <span class="t-frame" id="hero-frame-counter">FRAME 001/240</span>
+        </div>
+      </div>
+
+      <canvas id="hero-canvas" class="story-canvas"></canvas>
+
+      <div class="story-scroll-cue" id="hero-scroll-cue">
+        <div class="cue-line"></div>
+        <span class="cue-text">SCROLL TO DECONSTRUCT SPATIAL ARCHITECTURE</span>
+      </div>
+
+      <div class="spatial-callouts-container" id="hero-callouts">
+        <div class="spatial-callout callout-glass" id="callout-glass">
+          <div class="sc-crosshair"></div>
+          <div class="sc-line"></div>
+          <div class="sc-card">
+            <span class="sc-tag">LAYER 01 // OPTICAL</span>
+            <div class="sc-title">Nano-Etched Reference Glass</div>
+            <div class="sc-desc">Micro-tooth friction substrate, 100% DCI-P3 gamut, zero optical parallax.</div>
+          </div>
+        </div>
+
+        <div class="spatial-callout callout-digitizer" id="callout-digitizer">
+          <div class="sc-crosshair"></div>
+          <div class="sc-line"></div>
+          <div class="sc-card">
+            <span class="sc-tag">LAYER 02 // TRANSDUCTION</span>
+            <div class="sc-title">Electro-Magnetic Kinetic Grid</div>
+            <div class="sc-desc">480Hz vector polling rate with 8,192 hardware linear pressure tiers.</div>
+          </div>
+        </div>
+
+        <div class="spatial-callout callout-silicon" id="callout-silicon">
+          <div class="sc-crosshair"></div>
+          <div class="sc-line"></div>
+          <div class="sc-card">
+            <span class="sc-tag">LAYER 03 // INTELLIGENCE</span>
+            <div class="sc-title">Neural Silicon Core Matrix</div>
+            <div class="sc-desc">6 parallel reasoning dies generating 5–6 distinct creative archetypes.</div>
+          </div>
+        </div>
+
+        <div class="spatial-callout callout-chassis" id="callout-chassis">
+          <div class="sc-crosshair"></div>
+          <div class="sc-line"></div>
+          <div class="sc-card">
+            <span class="sc-tag">LAYER 04 // ENCLOSURE</span>
+            <div class="sc-title">CNC Titanium Unibody</div>
+            <div class="sc-desc">Machined aerospace alloy chassis with thermal dissipation channels.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-intro-overlay" id="hero-intro">
+        <div class="hero-intro-content">
+          <div class="hero-chip">
+            <span class="chip-dot"></span>
+            <span>AUTONOMOUS CREATIVE INTELLIGENCE</span>
+          </div>
+          <h1 class="hero-main-title">Deterministic Creative Engine<br/><span class="text-gradient">For True Designers</span></h1>
+          <p class="hero-main-desc">Eliminate blank-canvas paralysis. DesignOS ingests real-world project briefs and synthesizes 5 to 6 culturally anchored, structurally distinct design systems in seconds.</p>
+          <div class="hero-btn-row">
+            <a href="#metamorphosis-studio" class="btn-solid">Launch Interactive Studio</a>
+            <a href="#silicon-cockpit" class="btn-outline">Explore Silicon Cockpit ↓</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 02: NEURAL SILICON COCKPIT (ASYMMETRIC SPLIT PINNED SCROLL)
+       ========================================================================== -->
+  <section id="silicon-cockpit" class="scroll-story-section bg-darker">
+    <div class="sticky-viewport">
+
+      <div class="story-telemetry">
+        <div class="t-left">
+          <span class="t-pulse"></span>
+          <span class="t-label">MODULE 02 // NEURAL SILICON COCKPIT</span>
+        </div>
+        <div class="t-right">
+          <span class="t-frame" id="chip-frame-counter">FRAME 001/240</span>
+        </div>
+      </div>
+
+      <div class="cockpit-split-layout">
+        
+        <div class="cockpit-left-pane">
+          <div class="cockpit-header">
+            <span class="cockpit-badge">SEMICONDUCTOR TELEMETRY</span>
+            <h2 class="cockpit-title">Neural Silicon Core X1</h2>
+            <p class="cockpit-desc">A custom 3nm monolithic inference engine engineered specifically for multi-modal aesthetic reasoning, real-time semiotic audits, and vector typography synthesis.</p>
+          </div>
+
+          <div class="cockpit-gauges-grid">
+            <div class="gauge-card">
+              <span class="gc-lbl">FABRICATION PROCESS</span>
+              <span class="gc-val">3nm Monolithic FinFET</span>
+              <div class="gc-bar"><div class="gc-fill" style="width: 98%;"></div></div>
+            </div>
+            <div class="gauge-card">
+              <span class="gc-lbl">INFERENCE LATENCY</span>
+              <span class="gc-val">&lt; 280ms / Vector Token</span>
+              <div class="gc-bar"><div class="gc-fill" style="width: 88%;"></div></div>
+            </div>
+            <div class="gauge-card">
+              <span class="gc-lbl">PARALLEL DIES</span>
+              <span class="gc-val">6 Autonomous Personas</span>
+              <div class="gc-bar"><div class="gc-fill" style="width: 100%;"></div></div>
+            </div>
+            <div class="gauge-card">
+              <span class="gc-lbl">SYNAPTIC BUS</span>
+              <span class="gc-val">1.2 TB/s Optical Interconnect</span>
+              <div class="gc-bar"><div class="gc-fill" style="width: 92%;"></div></div>
+            </div>
+          </div>
+
+          <div class="cockpit-terminal-card">
+            <div class="ct-top">
+              <span class="ct-dot"></span>
+              <span class="ct-title">neural-kernel-stream.log</span>
+              <span class="ct-status">STREAMING</span>
+            </div>
+            <div class="ct-body" id="chip-terminal-logs">
+              <div class="ct-line"><span class="ct-time">[00.12s]</span> Ingesting cultural semiotics index... <span class="ct-ok">OK</span></div>
+              <div class="ct-line"><span class="ct-time">[00.45s]</span> Extracting CIE-Lab color space vectors... <span class="ct-ok">OK</span></div>
+              <div class="ct-line"><span class="ct-time">[00.89s]</span> Formulating 6 non-redundant design archetypes... <span class="ct-ok">DONE</span></div>
+              <div class="ct-line ct-active"><span class="ct-time">[01.14s]</span> Serializing design tokens to W3C format... <span class="ct-pulse-text">ACTIVE</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cockpit-right-pane">
+          <div class="die-canvas-wrapper">
+            <div class="die-hud-marker marker-top-left"><span>DIE STATUS: LEVITATING</span></div>
+            <div class="die-hud-marker marker-top-right"><span id="chip-die-temp">TEMP: 34.2°C</span></div>
+            <canvas id="chip-canvas" class="story-canvas"></canvas>
+            <div class="die-hud-marker marker-bottom">
+              <span id="chip-stage-label">SCROLL DOWN TO LEVITATE LID & REVEAL NEURAL DIES</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 03: THE BLUEPRINT DRAFTING LAB (PINNED HORIZONTAL BLUEPRINT)
+       ========================================================================== -->
+  <section id="drafting-lab" class="scroll-story-section">
+    <div class="sticky-viewport blueprint-theme">
+
+      <div class="story-telemetry">
+        <div class="t-left">
+          <span class="t-pulse"></span>
+          <span class="t-label">MODULE 03 // BLUEPRINT DRAFTING LAB // KINETIC STYLUS</span>
+        </div>
+        <div class="t-right">
+          <span class="t-frame" id="stylus-frame-counter">FRAME 001/240</span>
+        </div>
+      </div>
+
+      <div class="drafting-ruler ruler-top">
+        <span class="ruler-tick">00mm</span>
+        <span class="ruler-tick">25mm</span>
+        <span class="ruler-tick">50mm</span>
+        <span class="ruler-tick">75mm</span>
+        <span class="ruler-tick">100mm</span>
+        <span class="ruler-tick">125mm</span>
+        <span class="ruler-tick">150mm</span>
+        <span class="ruler-tick">175mm</span>
+      </div>
+
+      <canvas id="stylus-canvas" class="story-canvas"></canvas>
+
+      <div class="blueprint-parts-strip" id="stylus-parts-strip">
+        <div class="bp-part-tag" id="bp-tag-0">
+          <span class="bp-num">01</span>
+          <span class="bp-name">Carbon Tip Nib</span>
+          <span class="bp-sub">2B Tactile Resistance</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-1">
+          <span class="bp-num">02</span>
+          <span class="bp-name">Induction Coil</span>
+          <span class="bp-sub">Resonant RF Charging</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-2">
+          <span class="bp-num">03</span>
+          <span class="bp-name">Strain Capsule</span>
+          <span class="bp-sub">8,192 Pressure Tiers</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-3">
+          <span class="bp-num">04</span>
+          <span class="bp-name">Power Cell</span>
+          <span class="bp-sub">Solid-State Micro Battery</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-4">
+          <span class="bp-num">05</span>
+          <span class="bp-name">Logic Flex PCB</span>
+          <span class="bp-sub">480Hz Sensor Polling</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-5">
+          <span class="bp-num">06</span>
+          <span class="bp-name">Knurled Grip</span>
+          <span class="bp-sub">CNC Micro-Pattern</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-6">
+          <span class="bp-num">07</span>
+          <span class="bp-name">Titanium Sleeve</span>
+          <span class="bp-sub">Grade-5 Aerospace Alloy</span>
+        </div>
+        <div class="bp-part-tag" id="bp-tag-7">
+          <span class="bp-num">08</span>
+          <span class="bp-name">Tether Cap</span>
+          <span class="bp-sub">Neodymium Magnetic Base</span>
+        </div>
+      </div>
+
+      <div class="drafting-diagnostic-card">
+        <div class="ddc-item">
+          <span class="ddc-label">PRESSURE SENSITIVITY</span>
+          <span class="ddc-val">8,192 Hardware Linear</span>
+        </div>
+        <div class="ddc-divider"></div>
+        <div class="ddc-item">
+          <span class="ddc-label">TILT RECOGNITION</span>
+          <span class="ddc-val">±60° Continuous Arc</span>
+        </div>
+        <div class="ddc-divider"></div>
+        <div class="ddc-item">
+          <span class="ddc-label">TACTILE FRICTION</span>
+          <span class="ddc-val">Graphite on Cotton Rag</span>
+        </div>
+        <div class="ddc-divider"></div>
+        <div class="ddc-item">
+          <span class="ddc-label">HARDWARE JITTER</span>
+          <span class="ddc-val">0.00ms Zero Lag</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 04: UNIFIED METAMORPHOSIS STUDIO (EXECUTIVE PRO CONSOLE)
+       ========================================================================== -->
+  <section id="metamorphosis-studio" class="section-block bg-darker">
+    <div class="site-container">
+      
+      <div class="section-header">
+        <span class="section-label">MODULE 04 // LIVE METAMORPHOSIS STUDIO</span>
+        <h2 class="section-heading">Interactive Brief & Identity Engine</h2>
+        <p class="section-subheading">Select any client brief archetype below. Observe the real-time physical substrate metamorphosis while DesignOS extracts production design tokens, mathematical color sciences, and bulletproof client defense rationales.</p>
+      </div>
+
+      <!-- Master Unified Studio Console -->
+      <div class="studio-master-console">
+        
+        <!-- Top Pro Control Bar -->
+        <div class="studio-toolbar">
+          <div class="st-left">
+            <span class="st-dot"></span>
+            <span class="st-title">DESIGNOS INTELLIGENCE CONSOLE // KERNEL v2.6.4</span>
+            <span class="st-status-badge">ONLINE // ZERO LATENCY</span>
+          </div>
+          <div class="st-center">
+            <span class="st-brief-selector-lbl">BRIEF STREAM:</span>
+            <div class="st-brief-pills" id="studio-brief-pills">
+              <button class="st-pill active" data-preset="bev">Neo-Functional Formulation</button>
+              <button class="st-pill" data-preset="fintech">Autonomous Treasury</button>
+              <button class="st-pill" data-preset="skincare">Scandinavian Bio-Genomics</button>
+            </div>
+          </div>
+          <div class="st-right">
+            <div class="st-live-clock">
+              <span class="clock-label">INFERENCE:</span>
+              <span class="clock-val" id="st-inference-speed">0.24s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ingested Raw Brief Stream with Telemetry Badges -->
+        <div class="studio-ingest-bar">
+          <div class="sib-badge-col">
+            <span class="sib-tag">INPUT STREAM:</span>
+            <span class="sib-hash">SHA-256: 8f92a...c01</span>
+          </div>
+          <p id="studio-brief-text">Formulate packaging identity for a high-caffeine sparkling nootropic beverage targeted at software architects and precision creatives. Brand must communicate discipline, cognitive clarity, and zero synthetic excess.</p>
+        </div>
+
+        <!-- Main Studio Split View -->
+        <div class="studio-split-workspace">
+          
+          <!-- Left Panel: Concept Reasoning & Token Forge -->
+          <div class="studio-reasoning-panel">
+            
+            <!-- 5 Direction Tabs -->
+            <div class="studio-direction-tabs" id="studio-direction-tabs">
+              <!-- Populated via script -->
+            </div>
+
+            <!-- Active Concept Details -->
+            <div class="studio-concept-content">
+              
+              <!-- Archetype Header -->
+              <div class="scc-header-row">
+                <div>
+                  <span class="scc-archetype" id="studio-concept-archetype">ARCHETYPE // MINIMALIST DISCIPLINE</span>
+                  <h3 class="scc-title" id="studio-concept-title">Monastic Precision — Void & Optical White</h3>
+                </div>
+                <div class="scc-score-box">
+                  <span class="score-num" id="studio-score">98.4</span>
+                  <span class="score-lbl">SEMIOTIC SCORE</span>
+                </div>
+              </div>
+
+              <p class="scc-desc" id="studio-concept-desc">High-density matte obsidian chassis with micro-laser engraved geometric typography and a singular 0.5pt phosphor cyan alignment index. Eliminates all chaotic energy tropes in favor of calculated surgical focus.</p>
+
+              <!-- Color Science Swatches with Exact Hex & CIE-Lab values -->
+              <div class="studio-token-cluster">
+                <div class="stc-header">
+                  <span class="stc-label">COLOR SCIENCE PALETTE (CIE-LAB ACCURATE):</span>
+                  <span class="stc-meta">WCAG 2.2 AAA PASS</span>
+                </div>
+                <div class="stc-swatches" id="studio-swatches">
+                  <!-- Swatches generated here -->
+                </div>
+              </div>
+
+              <!-- Typographic Pairings & Whitespace -->
+              <div class="studio-meta-grid">
+                <div class="sm-card">
+                  <div class="sm-card-head">
+                    <span class="sm-lbl">TYPOGRAPHIC SYSTEM</span>
+                    <span class="sm-pill">W3C SPEC</span>
+                  </div>
+                  <span class="sm-val" id="studio-typo">Neue Haas Grotesk Display (75 Bold) + JetBrains Mono</span>
+                </div>
+                <div class="sm-card">
+                  <div class="sm-card-head">
+                    <span class="sm-lbl">MARKET WHITESPACE AUDIT</span>
+                    <span class="sm-pill">92% WHITESPACE</span>
+                  </div>
+                  <span class="sm-val" id="studio-whitespace">Monochromatic discipline creates 4.8x higher visual differentiation.</span>
+                </div>
+              </div>
+
+              <!-- Quantitative Radar Metrics -->
+              <div class="studio-radar-strip">
+                <div class="radar-metric">
+                  <span class="rm-lbl">CONTRAST RATIO</span>
+                  <span class="rm-val">18.4:1</span>
+                </div>
+                <div class="radar-metric">
+                  <span class="rm-lbl">MEMORABILITY INDEX</span>
+                  <span class="rm-val">96.2%</span>
+                </div>
+                <div class="radar-metric">
+                  <span class="rm-lbl">PRODUCTION READINESS</span>
+                  <span class="rm-val">100%</span>
+                </div>
+                <div class="radar-metric">
+                  <span class="rm-lbl">CULTURAL RELEVANCE</span>
+                  <span class="rm-val">94.8%</span>
+                </div>
+              </div>
+
+              <!-- Executive Rationale -->
+              <div class="studio-rationale-box">
+                <div class="srb-header">
+                  <span class="srb-lbl">EXECUTIVE CLIENT DEFENSE RATIONALE</span>
+                  <span class="srb-tag">READY FOR PITCH DECK</span>
+                </div>
+                <p class="srb-val" id="studio-rationale">"The container does not beg for retail shelf attention; it commands authority through absolute acoustic silence."</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Panel: 3D Packaging Synthesis Viewport -->
+          <div class="studio-viewport-panel">
+            <div class="svp-card">
+              
+              <div class="svp-hud-top">
+                <div class="hud-left-group">
+                  <span class="hud-status-live"></span>
+                  <span class="hud-mono">3D METAMORPHOSIS VIEWPORT</span>
+                </div>
+                <div class="hud-controls-group">
+                  <button class="hud-btn-mode active" id="btn-mode-3d">3D RENDER</button>
+                  <button class="hud-btn-mode" id="btn-auto-synth">AUTO PLAY</button>
+                  <span class="hud-frame" id="can-frame-counter">FRAME 001/240</span>
+                </div>
+              </div>
+              
+              <!-- 3D Packaging Canvas -->
+              <div class="canvas-relative-box">
+                <canvas id="can-canvas" class="studio-canvas"></canvas>
+                
+                <!-- Overlay Wireframe Coordinate Grid -->
+                <div class="viewport-crosshairs">
+                  <span class="ch-tl">+</span>
+                  <span class="ch-tr">+</span>
+                  <span class="ch-bl">+</span>
+                  <span class="ch-br">+</span>
+                </div>
+              </div>
+
+              <!-- Interactive Synthesis Scrubber Slider -->
+              <div class="svp-scrubber-bar">
+                <div class="ss-info">
+                  <div class="ss-state">
+                    <span class="ss-dot"></span>
+                    <span class="ss-lbl">SYNTHESIS STATE:</span>
+                    <span class="ss-val" id="can-scrub-val">RAW SUBSTRATE [0%]</span>
+                  </div>
+                  <span class="ss-drag-hint">DRAG SLIDER OR CANVAS TO SCRUB</span>
+                </div>
+                <input type="range" id="can-slider" min="0" max="239" value="0" class="studio-slider" />
+                <div class="ss-ticks">
+                  <span class="tick active" id="tick-0">00 / BLANK SUBSTRATE</span>
+                  <span class="tick" id="tick-1">120 / LASER ETCHING</span>
+                  <span class="tick" id="tick-2">240 / IDENTITY ASSEMBLED</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Studio Footer Action Bar (Copy Tokens directly) -->
+        <div class="studio-bottom-bar">
+          <div class="sbb-left">
+            <span class="sbb-status-dot"></span>
+            <span class="sbb-status">SYNCHRONIZATION READY</span>
+            <span class="sbb-token-count">W3C Compliant // 4 Tokens // 2 Typographic Scales // 1 Identity Architecture</span>
+          </div>
+          <div class="sbb-actions">
+            <button class="btn-token-copy" id="btn-copy-tokens">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy W3C Tokens JSON</span>
+            </button>
+            <button class="btn-token-copy" id="btn-copy-figma">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z"></path><path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z"></path><path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z"></path><path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z"></path><path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z"></path></svg>
+              <span>Export to Figma Tokens</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 05: BENTO CAPABILITY MATRIX
+       ========================================================================== -->
+  <section id="capabilities" class="section-block">
+    <div class="site-container">
+      <div class="section-header">
+        <span class="section-label">SYSTEM CAPABILITIES</span>
+        <h2 class="section-heading">Engineered for Creative Precision</h2>
+        <p class="section-subheading">DesignOS handles the deterministic cognitive load — research synthesis, competitive audits, and token architecture — so you operate entirely in high-level art direction.</p>
+      </div>
+
+      <div class="bento-layout">
+        <div class="bento-box bento-span-2 bento-hero-feature">
+          <div class="bento-meta">MODULE 01 // REAL-TIME CONTEXTUAL INGESTION</div>
+          <h3 class="bento-title">Live Global Cultural Index & Design Semiotics</h3>
+          <p class="bento-desc">Continuously tracks cultural shifts, design award catalogues, typography releases, and competitor portfolio shifts. Ground every concept in verified contemporary relevance rather than outdated visual cliches.</p>
+          <div class="bento-stats-row">
+            <div class="b-stat">
+              <span class="bs-num">140+</span>
+              <span class="bs-label">Design Index Repositories</span>
+            </div>
+            <div class="b-stat">
+              <span class="bs-num">&lt;2.4s</span>
+              <span class="bs-label">Visual Vector Lookups</span>
+            </div>
+            <div class="b-stat">
+              <span class="bs-num">0%</span>
+              <span class="bs-label">Hallucinated References</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bento-box">
+          <div class="bento-meta">MODULE 02 // MULTI-AGENT SYNTHESIS</div>
+          <h3 class="bento-title">5–6 Non-Redundant Design Directions</h3>
+          <p class="bento-desc">Parallel reasoning clusters explore mutually exclusive conceptual axes: brutalist, structural, reductive, hyper-tactile, and typographic-led systems.</p>
+        </div>
+
+        <div class="bento-box">
+          <div class="bento-meta">MODULE 03 // TOKEN ENGINE</div>
+          <h3 class="bento-title">Design Token & Variable Serialization</h3>
+          <p class="bento-desc">Direct output of standardized W3C Design Tokens, semantic color palettes (CIE-Lab verified), and modular scale typography specifications.</p>
+        </div>
+
+        <div class="bento-box">
+          <div class="bento-meta">MODULE 04 // RATIONALE FORGE</div>
+          <h3 class="bento-title">Executive Rationale & Decision Defense</h3>
+          <p class="bento-desc">Formulates structured design arguments that translate aesthetic decisions into business strategy metrics, accelerating stakeholder approvals.</p>
+        </div>
+
+        <div class="bento-box bento-span-2">
+          <div class="bento-meta">MODULE 05 // ECOSYSTEM BRIDGE</div>
+          <h3 class="bento-title">Direct Interoperability with Production Tooling</h3>
+          <p class="bento-desc">Seamlessly synchronizes generated tokens, color variables, prompt matrices, and vectors directly into industry standard applications.</p>
+          <div class="stack-badges">
+            <span class="stack-badge">Figma Variables API</span>
+            <span class="stack-badge">Adobe Creative Suite</span>
+            <span class="stack-badge">Tokens Studio</span>
+            <span class="stack-badge">Midjourney Parameter Configs</span>
+            <span class="stack-badge">W3C Design Token JSON</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 06: WORKFLOW DELTA COMPARISON TABLE
+       ========================================================================== -->
+  <section id="comparison" class="section-block bg-darker">
+    <div class="site-container">
+      <div class="section-header">
+        <span class="section-label">PERFORMANCE BENCHMARK</span>
+        <h2 class="section-heading">Workflow Delta vs Conventional Process</h2>
+        <p class="section-subheading">A quantifiable shift in how studio time is allocated between manual research friction and pure aesthetic craftsmanship.</p>
+      </div>
+
+      <div class="table-container">
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th class="col-phase">Operational Phase</th>
+              <th class="col-manual">Conventional Studio Workflow</th>
+              <th class="col-designos">DesignOS Creative Intelligence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="phase-name">Brief Deconstruction & Research</td>
+              <td class="manual-val">4–6 hours of disparate moodboard scraping across Pinterest and Behance</td>
+              <td class="designos-val"><span class="table-check">✓</span> <strong>30 seconds</strong> multi-source cultural context and whitespace audit</td>
+            </tr>
+            <tr>
+              <td class="phase-name">Concept Breadth</td>
+              <td class="manual-val">1–2 safe, conventional ideas constrained by deliverable deadlines</td>
+              <td class="designos-val"><span class="table-check">✓</span> <strong>5–6 distinct creative archetypes</strong> spanning diverse aesthetics</td>
+            </tr>
+            <tr>
+              <td class="phase-name">Color & Typographic Pairing</td>
+              <td class="manual-val">Ad-hoc color picker exploration with manual contrast checking</td>
+              <td class="designos-val"><span class="table-check">✓</span> <strong>WCAG 2.2 AAA certified</strong> mathematically balanced palettes</td>
+            </tr>
+            <tr>
+              <td class="phase-name">Client Review Defense</td>
+              <td class="manual-val">Subjective aesthetic justification often vulnerable to personal pushback</td>
+              <td class="designos-val"><span class="table-check">✓</span> <strong>Strategic market rationale</strong> grounded in competitive differentiation</td>
+            </tr>
+            <tr>
+              <td class="phase-name">Initial Pitch Deck Assembly</td>
+              <td class="manual-val">2–3 working days per project turnaround</td>
+              <td class="designos-val"><span class="table-check">✓</span> <strong>Same-day executive deck formulation</strong> with full rationale</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 07: ACCESS REQUEST / CTA
+       ========================================================================== -->
+  <section id="access" class="section-block">
+    <div class="site-container">
+      <div class="access-panel">
+        <div class="panel-glow" aria-hidden="true"></div>
+        <div class="access-badge">LIMITED ENTERPRISE & STUDIO ACCESS</div>
+        <h2 class="access-title">Elevate Your Studio's<br/>Creative Output</h2>
+        <p class="access-desc">Join the selective private beta for design directors, branding agencies, and senior visual architects.</p>
+
+        <form class="access-form" id="waitlist-form">
+          <div class="input-cluster">
+            <input type="email" id="email-input" placeholder="studio.director@agency.com" required class="form-input" />
+            <button type="submit" class="btn-solid" id="waitlist-btn">
+              <span>Request Studio Invitation</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="access-meta-line">
+          <span>Deterministic Output</span>
+          <span class="meta-dot"></span>
+          <span>Zero Public Training</span>
+          <span class="meta-dot"></span>
+          <span>Enterprise SLA Available</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================================================
+       SECTION 08: FOOTER
+       ========================================================================== -->
+  <footer id="footer">
+    <div class="site-container">
+      <div class="footer-grid">
+        <div class="footer-brand-column">
+          <div class="nav-brand">
+            <span class="brand-glyph">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M9 21V9" />
+              </svg>
+            </span>
+            <span class="brand-name">Design<span class="text-accent">OS</span></span>
+          </div>
+          <p class="footer-tagline">Autonomous creative intelligence platform for graphic designers, art directors, and design studios.</p>
+          <div class="system-status-indicator">
+            <span class="status-live-dot"></span>
+            <span>All Global Reasoning Nodes Operational</span>
+          </div>
+        </div>
+
+        <div class="footer-column">
+          <div class="footer-heading">Deconstruction Views</div>
+          <a href="#hero-spatial" class="footer-link">01 // Spatial Anatomy</a>
+          <a href="#silicon-cockpit" class="footer-link">02 // Silicon Cockpit</a>
+          <a href="#drafting-lab" class="footer-link">03 // Blueprint Lab</a>
+          <a href="#metamorphosis-studio" class="footer-link">04 // Synthesis Studio</a>
+        </div>
+
+        <div class="footer-column">
+          <div class="footer-heading">Resources</div>
+          <a href="#metamorphosis-studio" class="footer-link">Live Studio Console</a>
+          <a href="#comparison" class="footer-link">Workflow Comparison</a>
+          <a href="#" class="footer-link">W3C Token Schema</a>
+          <a href="#" class="footer-link">Figma Plugin Bridge</a>
+        </div>
+
+        <div class="footer-column">
+          <div class="footer-heading">Governance</div>
+          <a href="#" class="footer-link">Privacy Protocol</a>
+          <a href="#" class="footer-link">Terms of License</a>
+          <a href="#" class="footer-link">SOC-2 Audit Report</a>
+          <a href="#" class="footer-link">Model Data Integrity</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom-row">
+        <span class="copyright-text">© 2026 Taliyo Technologies Inc. All rights reserved.</span>
+        <div class="footer-legal-links">
+          <span>Security Certified (SOC-2)</span>
+          <span class="meta-dot"></span>
+          <span>ISO/IEC 27001</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

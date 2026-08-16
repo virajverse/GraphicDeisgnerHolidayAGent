@@ -43,3 +43,13 @@ __pycache__/
 .venv/
 env/
 venv/
+
+# Goku & Large Media Sequences (Strictly Ignored)
+goku edit/
+*goku*
+public/goku*
+public/frames*
+public/*.zip
+*.mp4
+h.txt
+test/

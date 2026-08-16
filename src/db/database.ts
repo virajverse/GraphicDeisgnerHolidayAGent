@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { createClient, Client } from '@libsql/client';
-import { UserRecord, ClientRecord, EventRecord, AlertRecord, CreativeIdeaRecord } from '../types/database.js';
+import { UserRecord, ClientRecord, EventRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord } from '../types/database.js';
 
 const tursoUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
@@ -23,6 +23,7 @@ const memCache = {
   events: new Map<string, EventRecord>(),
   alerts: new Map<string, AlertRecord>(),
   creative_ideas: new Map<string, CreativeIdeaRecord>(),
+  referrals: new Map<string, ReferralRecord>(),
   settings: new Map<string, { key: string; value: string; is_enabled: number }>()
 };
 
@@ -88,12 +89,32 @@ const db = {
           return Array.from(memCache.events.values())[0] || null;
         }
 
+        if (sql.includes('FROM referrals')) {
+          if (sql.includes('referrer_chat_id = ?')) {
+            const refChatId = args[0]?.toString();
+            return Array.from(memCache.referrals.values()).filter(r => r.referrer_chat_id === refChatId);
+          }
+          if (sql.includes('referred_chat_id = ?')) {
+            const refChatId = args[0]?.toString();
+            return Array.from(memCache.referrals.values()).find(r => r.referred_chat_id === refChatId) || null;
+          }
+          return Array.from(memCache.referrals.values());
+        }
+
         if (sql.includes('COUNT(*)')) {
           if (sql.includes('FROM users')) return { count: memCache.users.size || 1 };
           if (sql.includes('FROM events')) return { count: memCache.events.size || 20 };
           if (sql.includes('FROM clients')) return { count: memCache.clients.size || 2 };
           if (sql.includes('FROM alerts')) return { count: memCache.alerts.size || 0 };
           if (sql.includes('FROM creative_ideas')) return { count: memCache.creative_ideas.size || 0 };
+          if (sql.includes('FROM referrals')) {
+            if (sql.includes('referrer_chat_id = ?')) {
+              const refChatId = args[0]?.toString();
+              const count = Array.from(memCache.referrals.values()).filter(r => r.referrer_chat_id === refChatId).length;
+              return { count };
+            }
+            return { count: memCache.referrals.size || 0 };
+          }
           if (sql.includes('FROM feedback')) return { count: 0 };
           if (sql.includes('FROM agent_logs')) return { count: 1 };
           return { count: 0 };
@@ -114,10 +135,22 @@ const db = {
           return Array.from(memCache.clients.values());
         }
         if (sql.includes('FROM users')) {
+          if (sql.includes('ORDER BY referral_count DESC')) {
+            return Array.from(memCache.users.values())
+              .filter(u => (u.referral_count || 0) > 0)
+              .sort((a, b) => (b.referral_count || 0) - (a.referral_count || 0));
+          }
           return Array.from(memCache.users.values());
         }
         if (sql.includes('FROM alerts')) {
           return Array.from(memCache.alerts.values());
+        }
+        if (sql.includes('FROM referrals')) {
+          if (sql.includes('referrer_chat_id = ?')) {
+            const refChatId = args[0]?.toString();
+            return Array.from(memCache.referrals.values()).filter(r => r.referrer_chat_id === refChatId);
+          }
+          return Array.from(memCache.referrals.values());
         }
         return [];
       },
@@ -129,6 +162,19 @@ const db = {
         });
 
         // Instant In-Memory Cache Update for 0ms latency
+        if (sql.includes('INTO referrals')) {
+          const refObj: ReferralRecord = {
+            id: args[0],
+            referrer_chat_id: args[1]?.toString(),
+            referred_chat_id: args[2]?.toString(),
+            referred_name: args[3] || '',
+            referred_username: args[4] || '',
+            credits_awarded: args[5] !== undefined ? args[5] : 50,
+            created_at: new Date().toISOString()
+          };
+          memCache.referrals.set(refObj.id, refObj);
+        }
+
         if (sql.includes('INTO users')) {
           const userObj: UserRecord = {
             id: args[0],
@@ -136,14 +182,38 @@ const db = {
             username: args[2] || '',
             telegram_chat_id: args[3]?.toString(),
             is_approved: args[4] !== undefined ? args[4] : 1,
-            role: args[5] || 'DESIGNER'
+            role: args[5] || 'DESIGNER',
+            referred_by: args[6]?.toString() || undefined,
+            referral_count: 0,
+            referral_credits: 0,
+            referral_tier: 'BRONZE'
           };
           memCache.users.set(userObj.id, userObj);
         }
 
         // In-Memory Fast Sync for user updates
         if (sql.includes('UPDATE users')) {
-          if (sql.includes('is_banned = 1') || sql.includes("verification_status = 'BANNED'")) {
+          if (sql.includes('referral_count = ?')) {
+            const refCount = args[0];
+            const refCredits = args[1];
+            const refTier = args[2];
+            const chatId = args[3]?.toString();
+            for (const u of memCache.users.values()) {
+              if (u.telegram_chat_id === chatId) {
+                u.referral_count = refCount;
+                u.referral_credits = refCredits;
+                u.referral_tier = refTier;
+              }
+            }
+          } else if (sql.includes('referral_credits = ?')) {
+            const refCredits = args[0];
+            const chatId = args[1]?.toString();
+            for (const u of memCache.users.values()) {
+              if (u.telegram_chat_id === chatId) {
+                u.referral_credits = refCredits;
+              }
+            }
+          } else if (sql.includes('is_banned = 1') || sql.includes("verification_status = 'BANNED'")) {
             const chatId = args[0]?.toString();
             for (const u of memCache.users.values()) {
               if (u.telegram_chat_id === chatId) {
@@ -279,6 +349,16 @@ export async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS referrals (
+      id TEXT PRIMARY KEY,
+      referrer_chat_id TEXT NOT NULL,
+      referred_chat_id TEXT NOT NULL,
+      referred_name TEXT,
+      referred_username TEXT,
+      credits_awarded INTEGER DEFAULT 50,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS system_settings (
       key TEXT PRIMARY KEY,
       value TEXT,
@@ -300,7 +380,20 @@ export async function initDatabase() {
 
   try {
     await tursoClient.executeMultiple(schema);
-    console.log('[Database] ☁️ Turso Cloud Schema successfully synchronized!');
+    
+    // Auto-migrate user columns if they don't exist yet
+    const migrations = [
+      "ALTER TABLE users ADD COLUMN referred_by TEXT;",
+      "ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0;",
+      "ALTER TABLE users ADD COLUMN referral_credits INTEGER DEFAULT 0;",
+      "ALTER TABLE users ADD COLUMN referral_tier TEXT DEFAULT 'BRONZE';"
+    ];
+
+    for (const sql of migrations) {
+      await tursoClient.execute(sql).catch(() => {});
+    }
+
+    console.log('[Database] ☁️ Turso Cloud Schema & Referrals successfully synchronized!');
   } catch (err: any) {
     console.warn(`[Database] Turso Cloud Schema Sync Warning: ${err.message}`);
   }
