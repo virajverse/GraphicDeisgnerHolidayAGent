@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { createClient, Client } from '@libsql/client';
 import { UserRecord, ClientRecord, EventRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord, AffiliateCampaignRecord } from '../types/database.js';
+import { inspectAndSanitizeQuery, checkDbRateLimit, maskSensitiveContent, recordSecurityAudit, getSecurityAuditLogs } from './dbSecurityShield.js';
+
+export { getSecurityAuditLogs, maskSensitiveContent };
 
 const tursoUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
@@ -9,7 +12,7 @@ if (!tursoUrl || !tursoAuthToken) {
   console.warn('[Database] ⚠️ TURSO_DATABASE_URL or TURSO_AUTH_TOKEN missing in .env!');
 }
 
-console.log(`[Database] 🌐 100% Pure Turso Cloud Engine Active: ${tursoUrl}`);
+console.log(`[Database] 🌐 100% Pure Turso Cloud Engine Active: ${tursoUrl ? tursoUrl.slice(0, 35) + '...' : 'local'}`);
 
 export const tursoClient: Client = createClient({
   url: tursoUrl || 'libsql://dummy.turso.io',
@@ -35,12 +38,17 @@ export interface PreparedStatement {
 }
 
 /**
- * Unified 100% Cloud Turso Database Interface
+ * Unified 100% Cloud Turso Database Interface Protected by Security Shield
  */
 const db = {
   client: tursoClient,
 
   async exec(sql: string) {
+    const scan = inspectAndSanitizeQuery(sql, []);
+    if (!scan.isSafe) {
+      console.warn(`[DB Shield Blocked Exec]: ${scan.threatType} — ${scan.blockedReason}`);
+      return null;
+    }
     return await tursoClient.executeMultiple(sql);
   },
 
@@ -50,7 +58,14 @@ const db = {
 
   prepare(sql: string): PreparedStatement {
     return {
-      get(...args: any[]) {
+      get(...rawArgs: any[]) {
+        if (!checkDbRateLimit()) return null;
+        const scan = inspectAndSanitizeQuery(sql, rawArgs);
+        if (!scan.isSafe) {
+          console.warn(`[DB Shield Blocked Read]: ${scan.threatType} — ${scan.blockedReason}`);
+          return null;
+        }
+        const args = scan.sanitizedArgs;
         if (sql.includes('FROM system_settings')) {
           const key = args[0];
           return memCache.settings.get(key) || { key, value: '', is_enabled: 0 };
@@ -144,7 +159,15 @@ const db = {
         return null;
       },
 
-      all(...args: any[]): any[] {
+      all(...rawArgs: any[]): any[] {
+        if (!checkDbRateLimit()) return [];
+        const scan = inspectAndSanitizeQuery(sql, rawArgs);
+        if (!scan.isSafe) {
+          console.warn(`[DB Shield Blocked Read-All]: ${scan.threatType} — ${scan.blockedReason}`);
+          return [];
+        }
+        const args = scan.sanitizedArgs;
+
         if (sql.includes('FROM events')) {
           return Array.from(memCache.events.values());
         }
@@ -175,10 +198,18 @@ const db = {
         return [];
       },
 
-      run(...args: any[]) {
+      run(...rawArgs: any[]) {
+        if (!checkDbRateLimit()) return { changes: 0 };
+        const scan = inspectAndSanitizeQuery(sql, rawArgs);
+        if (!scan.isSafe) {
+          console.warn(`[DB Shield Blocked Write]: ${scan.threatType} — ${scan.blockedReason}`);
+          return { changes: 0 };
+        }
+        const args = scan.sanitizedArgs;
+
         // Fire async execute to Turso Cloud in background
         tursoClient.execute({ sql, args }).catch(err => {
-          console.warn(`[Turso Cloud Write Warning]: ${err.message}`);
+          console.warn(`[Turso Cloud Write Warning]: ${maskSensitiveContent(err.message)}`);
         });
 
         // Instant In-Memory Cache Update for 0ms latency

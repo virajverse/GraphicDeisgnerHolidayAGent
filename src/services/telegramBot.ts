@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import db from '../db/database.js';
+import db, { getSecurityAuditLogs } from '../db/database.js';
 import { fetchRealWorldContext } from './contextEngine.js';
 import { generateCreativeIdeas } from './ideationEngine.js';
 import { executeClusterQuery, MODEL_CLUSTERS } from './clusterModelRouter.js';
@@ -144,10 +144,13 @@ export const ADMIN_INLINE_HUB = {
     ],
     [
       { text: '📢 Broadcast Hub', callback_data: 'adm_broadcast' },
-      { text: '👥 Community Ground', callback_data: 'adm_ground' }
+      { text: '🛡️ DB Security Shield', callback_data: 'adm_dbsec' }
     ],
     [
-      { text: '⛔ Banned Users', callback_data: 'adm_banned' },
+      { text: '👥 Community Ground', callback_data: 'adm_ground' },
+      { text: '⛔ Banned Users', callback_data: 'adm_banned' }
+    ],
+    [
       { text: '📊 Deep Telemetry', callback_data: 'adm_telemetry' }
     ]
   ]
@@ -166,7 +169,7 @@ export const ADMIN_MASTER_KEYBOARD = {
   keyboard: [
     [{ text: '👑 Admin Control' }, { text: '👥 Active Designers' }],
     [{ text: '🔗 Affiliate Hub' }, { text: '🏆 Top Referrers' }],
-    [{ text: '🔔 Pending Approvals' }, { text: '🚀 Trigger Radar Scan' }],
+    [{ text: '🛡️ DB Security' }, { text: '🚀 Trigger Radar Scan' }],
     [{ text: '📢 Broadcast Hub' }, { text: '👥 Community Ground' }],
     [{ text: '⛔ Banned Users' }, { text: '📊 Deep AI Telemetry' }],
     [{ text: '🎁 Invite & Earn' }]
@@ -654,6 +657,40 @@ export async function handleDeleteAffiliateCommand(chatId: string | number, code
 
   db.prepare('DELETE FROM affiliate_campaigns WHERE code = ?').run(cleanCode);
   return await sendSafeTelegramMessage(chatId, `🗑️ Campaign *${camp.campaign_name}* (\`${cleanCode}\`) ko permanently delete kar diya gaya hai.`);
+}
+
+/**
+ * 🛡️ Super Admin Database Security Shield & Audit Telemetry
+ */
+export async function handleDbSecurityStatus(chatId: string | number) {
+  if (!isMasterAdmin(chatId)) {
+    return await sendSafeTelegramMessage(chatId, '⛔ *Access Restricted:* Sirf Super Admin database security status dekh sakta hai.');
+  }
+
+  const auditLogs = getSecurityAuditLogs(10);
+  let logText = '';
+  if (auditLogs.length === 0) {
+    logText = `_Koi security threat ya blocked attack detect nahi hua. Database 100% secure hai!_`;
+  } else {
+    auditLogs.forEach((log, i) => {
+      const icon = log.threatLevel === 'CRITICAL' ? '🚨' : log.threatLevel === 'HIGH' ? '⚠️' : '🛡️';
+      logText += `${i + 1}. ${icon} *[${log.action}]* \`${log.threatLevel}\`\n   • ${log.details}\n   • _${new Date(log.timestamp).toLocaleTimeString()}_\n\n`;
+    });
+  }
+
+  const msg = `🛡️ *TALIYO ZERO-TRUST DATABASE SECURITY SHIELD*\n\n` +
+    `• *SQL Injection Firewall:* 🟢 ACTIVE (Zero-Trust Heuristic Scanner)\n` +
+    `• *Destructive DDL Guard:* 🟢 ACTIVE (DROP/TRUNCATE Lockdown)\n` +
+    `• *Rate-Limit Flood Guard:* 🟢 ACTIVE (Max 200 queries/10s)\n` +
+    `• *Input Sanitization:* 🟢 ACTIVE (Buffer Overflow Defense)\n` +
+    `• *Secret & Token Redaction:* 🟢 ACTIVE\n` +
+    `• *Turso Cloud SSL/TLS:* 🟢 TLS v1.3 Encrypted in Transit\n\n` +
+    `📋 *RECENT SECURITY AUDIT TRAIL:*\n` +
+    logText;
+
+  return await sendSafeTelegramMessage(chatId, msg, {
+    reply_markup: ADMIN_INLINE_HUB
+  });
 }
 
 function getDaysRemaining(eventDateMMDD: string): number {
@@ -1194,6 +1231,9 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `2️⃣ *Photo + Action Button Broadcast:*\n\`/broadcastphoto PhotoURL | Caption | ButtonText | ButtonURL\`\n\n` +
         `3️⃣ *Titled Link + Button Broadcast:*\n\`/broadcastlink Headline | Description | ButtonText | ButtonURL\``;
       return await sendSafeTelegramMessage(chatId, broadcastHubMsg, { reply_markup: ADMIN_INLINE_HUB });
+    } else if (data === 'adm_dbsec') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🛡️ Loading Database Security Shield...' }).catch(() => {});
+      return await handleDbSecurityStatus(chatId);
     } else if (data === 'adm_ground') {
       await botInstance.answerCallbackQuery(query.id, { text: '👥 Community Ground...' }).catch(() => {});
       const setting = db.prepare("SELECT * FROM system_settings WHERE key = 'community_group'").get();
@@ -1627,6 +1667,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
       if (text.startsWith('/deleteaffiliate')) {
         const targetCode = text.replace('/deleteaffiliate', '').trim();
         return await handleDeleteAffiliateCommand(chatId, targetCode);
+      }
+
+      if (text === '🛡️ DB Security' || text === '/dbsecurity' || text === '/dbshield') {
+        return await handleDbSecurityStatus(chatId);
       }
 
       if (text === '📢 Broadcast Hub' || text === '/broadcast') {

@@ -180,6 +180,27 @@ async function runFullAudit() {
   // Clean test campaign
   db.prepare('DELETE FROM affiliate_campaigns WHERE code = ?').run(testCode);
 
+  // 9. DATABASE SECURITY SHIELD & ZERO-TRUST FIREWALL
+  console.log('\n🛡️ STEP 9: Verifying Database Security Shield & SQL Injection Defense...');
+  const { inspectAndSanitizeQuery, maskSensitiveContent, getSecurityAuditLogs } = await import('../src/db/dbSecurityShield.js');
+
+  // Test 9A: SQL Injection Attack Detection
+  const sqliAttempt = inspectAndSanitizeQuery("SELECT * FROM users WHERE username = ?", ["' UNION SELECT password FROM admin_secrets --"]);
+  check('DB Security Shield', 'SQL Injection Payload Blocking', sqliAttempt.isSafe === false && sqliAttempt.threatType === 'SQL_INJECTION_ATTEMPT', 'Blocked malicious UNION SELECT injection attempt');
+
+  // Test 9B: Destructive DDL Protection (DROP TABLE)
+  const ddlAttempt = inspectAndSanitizeQuery("DROP TABLE users", []);
+  check('DB Security Shield', 'Destructive DDL Lockdown', ddlAttempt.isSafe === false && ddlAttempt.threatType === 'DESTRUCTIVE_DDL_BLOCKED', 'Blocked unauthorized DROP TABLE statement');
+
+  // Test 9C: Sensitive Token & Secret Masking
+  const rawTokenMsg = "Error connecting to bot8994361148:AAFl5xN84_DUMMY_SECRET_KEY_12345";
+  const masked = maskSensitiveContent(rawTokenMsg);
+  check('DB Security Shield', 'Sensitive Token Redaction', masked.includes('[REDACTED_BOT_TOKEN]') && !masked.includes('AAFl5xN84_DUMMY_SECRET_KEY_12345'), 'Masked raw Telegram token in logs');
+
+  // Test 9D: Legitimate Query Pass-through
+  const legitQuery = inspectAndSanitizeQuery("SELECT * FROM users WHERE telegram_chat_id = ?", ["1634951702"]);
+  check('DB Security Shield', 'Legitimate Parameter Validation', legitQuery.isSafe === true && legitQuery.sanitizedArgs[0] === '1634951702', 'Authorized valid parameters without false positive');
+
   // SUMMARY REPORT
   console.log('\n======================================================');
   const total = results.length;
