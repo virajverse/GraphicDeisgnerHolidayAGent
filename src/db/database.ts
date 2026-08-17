@@ -54,6 +54,26 @@ const db = {
           const key = args[0];
           return memCache.settings.get(key) || { key, value: '', is_enabled: 0 };
         }
+
+        if (sql.includes('COUNT(*)')) {
+          if (sql.includes('FROM users')) return { count: memCache.users.size || 1 };
+          if (sql.includes('FROM events')) return { count: memCache.events.size || 20 };
+          if (sql.includes('FROM clients')) return { count: memCache.clients.size || 2 };
+          if (sql.includes('FROM alerts')) return { count: memCache.alerts.size || 0 };
+          if (sql.includes('FROM creative_ideas')) return { count: memCache.creative_ideas.size || 0 };
+          if (sql.includes('FROM referrals')) {
+            if (sql.includes('referrer_chat_id = ?')) {
+              const refChatId = args[0]?.toString();
+              const count = Array.from(memCache.referrals.values()).filter(r => r.referrer_chat_id === refChatId).length;
+              return { count };
+            }
+            return { count: memCache.referrals.size || 0 };
+          }
+          if (sql.includes('FROM feedback')) return { count: 0 };
+          if (sql.includes('FROM agent_logs')) return { count: 1 };
+          return { count: 0 };
+        }
+
         // Synchronous read from cloud memory-synced tables
         if (sql.includes('FROM users')) {
           if (sql.includes('telegram_chat_id = ?')) {
@@ -99,25 +119,6 @@ const db = {
             return Array.from(memCache.referrals.values()).find(r => r.referred_chat_id === refChatId) || null;
           }
           return Array.from(memCache.referrals.values());
-        }
-
-        if (sql.includes('COUNT(*)')) {
-          if (sql.includes('FROM users')) return { count: memCache.users.size || 1 };
-          if (sql.includes('FROM events')) return { count: memCache.events.size || 20 };
-          if (sql.includes('FROM clients')) return { count: memCache.clients.size || 2 };
-          if (sql.includes('FROM alerts')) return { count: memCache.alerts.size || 0 };
-          if (sql.includes('FROM creative_ideas')) return { count: memCache.creative_ideas.size || 0 };
-          if (sql.includes('FROM referrals')) {
-            if (sql.includes('referrer_chat_id = ?')) {
-              const refChatId = args[0]?.toString();
-              const count = Array.from(memCache.referrals.values()).filter(r => r.referrer_chat_id === refChatId).length;
-              return { count };
-            }
-            return { count: memCache.referrals.size || 0 };
-          }
-          if (sql.includes('FROM feedback')) return { count: 0 };
-          if (sql.includes('FROM agent_logs')) return { count: 1 };
-          return { count: 0 };
         }
 
         if (sql.includes('FROM agent_logs')) {
@@ -389,8 +390,27 @@ export async function initDatabase() {
       "ALTER TABLE users ADD COLUMN referral_tier TEXT DEFAULT 'BRONZE';"
     ];
 
-    for (const sql of migrations) {
-      await tursoClient.execute(sql).catch(() => {});
+    // Sync & Hydrate all existing records from Turso Cloud into memCache
+    try {
+      const usersRes = await tursoClient.execute("SELECT * FROM users");
+      for (const row of usersRes.rows) {
+        memCache.users.set(row.id as string, row as any);
+      }
+      const eventsRes = await tursoClient.execute("SELECT * FROM events");
+      for (const row of eventsRes.rows) {
+        memCache.events.set(row.id as string, row as any);
+      }
+      const clientsRes = await tursoClient.execute("SELECT * FROM clients");
+      for (const row of clientsRes.rows) {
+        memCache.clients.set(row.id as string, row as any);
+      }
+      const referralsRes = await tursoClient.execute("SELECT * FROM referrals");
+      for (const row of referralsRes.rows) {
+        memCache.referrals.set(row.id as string, row as any);
+      }
+      console.log(`[Database] 🚀 Cloud In-Memory Hydrated: ${memCache.users.size} Users, ${memCache.events.size} Events, ${memCache.clients.size} Clients, ${memCache.referrals.size} Referrals`);
+    } catch (e: any) {
+      console.warn(`[Database Cache Hydration]: ${e.message}`);
     }
 
     console.log('[Database] ☁️ Turso Cloud Schema & Referrals successfully synchronized!');
@@ -398,47 +418,53 @@ export async function initDatabase() {
     console.warn(`[Database] Turso Cloud Schema Sync Warning: ${err.message}`);
   }
 
-  // Seed default master admin into cloud memory cache
-  const defaultAdmin: UserRecord = {
-    id: 'default_user',
-    name: 'Viraj (Social Designer)',
-    username: 'virajverse',
-    profession: 'Graphic Designer',
-    location: 'India',
-    telegram_chat_id: process.env.TELEGRAM_DEFAULT_CHAT_ID || '1634951702',
-    is_approved: 1,
-    role: 'ADMIN'
-  };
-  memCache.users.set('default_user', defaultAdmin);
+  // Seed default master admin into cloud memory cache if empty
+  if (memCache.users.size === 0) {
+    const defaultAdmin: UserRecord = {
+      id: 'default_user',
+      name: 'Viraj (Social Designer)',
+      username: 'virajverse',
+      profession: 'Graphic Designer',
+      location: 'India',
+      telegram_chat_id: process.env.TELEGRAM_DEFAULT_CHAT_ID || '1634951702',
+      is_approved: 1,
+      role: 'ADMIN'
+    };
+    memCache.users.set('default_user', defaultAdmin);
+  }
 
-  // Seed default clients into cloud memory cache
-  memCache.clients.set('client_ngo', {
-    id: 'client_ngo',
-    user_id: 'default_user',
-    name: 'Aasha Foundation',
-    industry: 'NGO',
-    brand_tone: 'Empathetic, Hopeful & Impactful',
-    creative_style: 'Authentic photography, bold typography, warm storytelling'
-  });
+  // Seed default clients into cloud memory cache if empty
+  if (memCache.clients.size === 0) {
+    memCache.clients.set('client_ngo', {
+      id: 'client_ngo',
+      user_id: 'default_user',
+      name: 'Aasha Foundation',
+      industry: 'NGO',
+      brand_tone: 'Empathetic, Hopeful & Impactful',
+      creative_style: 'Authentic photography, bold typography, warm storytelling'
+    });
 
-  memCache.clients.set('client_tech', {
-    id: 'client_tech',
-    user_id: 'default_user',
-    name: 'Nexus SaaS',
-    industry: 'Technology',
-    brand_tone: 'Forward-looking, Modern & Crisp',
-    creative_style: 'Minimal dark backgrounds, glassmorphism UI snippets, clean vectors'
-  });
+    memCache.clients.set('client_tech', {
+      id: 'client_tech',
+      user_id: 'default_user',
+      name: 'Nexus SaaS',
+      industry: 'Technology',
+      brand_tone: 'Forward-looking, Modern & Crisp',
+      creative_style: 'Minimal dark backgrounds, glassmorphism UI snippets, clean vectors'
+    });
+  }
 
-  // Seed default live radar events into cloud memory cache
-  memCache.events.set('evt_ind_day', {
-    id: 'evt_ind_day',
-    name: 'Independence Day India',
-    country: 'India',
-    date: '08-15',
-    category: 'NATIONAL',
-    importance: 95
-  });
+  // Seed default live radar events into cloud memory cache if empty
+  if (memCache.events.size === 0) {
+    memCache.events.set('evt_ind_day', {
+      id: 'evt_ind_day',
+      name: 'Independence Day India',
+      country: 'India',
+      date: '08-15',
+      category: 'NATIONAL',
+      importance: 95
+    });
+  }
 
   return db;
 }
