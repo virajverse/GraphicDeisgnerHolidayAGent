@@ -13,6 +13,7 @@ import { pruneDatabaseCache } from './dbPruner.js';
 import { runEventCheckAndAlert } from './scheduler.js';
 import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord, AffiliateCampaignRecord } from '../types/database.js';
 import { EventContext, IdeationResult } from '../types/models.js';
+import { sendCelebrationAnimation, generateVisualColorSwatches, VISUAL_ASSETS } from './visualMediaEngine.js';
 
 const ADMIN_CODE = process.env.ADMIN_INVITE_CODE || 'TALIYO2026';
 const ADMIN_HANDLE = process.env.ADMIN_TELEGRAM_HANDLE || '@virajverse';
@@ -1097,21 +1098,27 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await processAgentDesignRequest(chatId, evtName, { id: 'default_user', name: 'Designer', telegram_chat_id: chatId.toString(), is_approved: 1, role: 'DESIGNER' });
     } else if (data.startsWith('specs_')) {
       await botInstance.answerCallbackQuery(query.id, { text: '🎨 Generating Visual Specs...' }).catch(() => {});
+      
+      const colorSwatches = generateVisualColorSwatches([
+        { role: 'Primary Accent', hex: '#FF5722', name: 'Electric Flame / Vibrant Energy' },
+        { role: 'Secondary Tone', hex: '#6C5CE7', name: 'Cyber Violet / Royal Accent' },
+        { role: 'Background Canvas', hex: '#0A0E17', name: 'Sleek Dark Mode Titanium' },
+        { role: 'Surface Card', hex: '#161F30', name: 'Glassmorphism Tint' },
+        { role: 'Typography Text', hex: '#F5F7FA', name: 'High Contrast Crisp White' }
+      ]);
+
       const specsText = `🎨 *DESIGNER VISUAL SPECS & ASSET GUIDE*\n\n` +
-        `🎨 *Recommended Color Palette:*\n` +
-        `• Primary Accent: \`#FF5722\` (Vibrant Energy)\n` +
-        `• Background: \`#0A0E17\` (Sleek Dark Mode)\n` +
-        `• Surface Card: \`#161F30\` (Glassmorphism Tint)\n` +
-        `• Typography Text: \`#F5F7FA\` (High Contrast White)\n\n` +
-        `🔤 *Font Hierarchy & Pairing:*\n` +
+        colorSwatches +
+        `🔤 *FONT HIERARCHY & PAIRINGS:*\n` +
         `• Display Headline: *Outfit Bold / Syne ExtraBold* (70pt+)\n` +
         `• Subheading & Labels: *Plus Jakarta Sans Medium* (24pt)\n` +
         `• Body Text: *Inter Regular* (16pt)\n\n` +
-        `📐 *Grid & Layout Guidelines:*\n` +
-        `• Canvas Dimensions: 1080 x 1350 px (4:5 Portrait Carousel)\n` +
-        `• Safe Margins: 60px padding on top/bottom/sides\n` +
+        `📐 *GRID & LAYOUT GUIDELINES:*\n` +
+        `• Canvas Dimensions: \`1080 x 1350 px\` (4:5 Portrait Carousel)\n` +
+        `• Safe Margins: \`60px\` padding on top/bottom/sides\n` +
         `• Aesthetic Rule: 70% negative space, 30% visual content focus.`;
-      await sendSafeTelegramMessage(chatId, specsText);
+      
+      await sendCelebrationAnimation(botInstance, chatId, 'PALETTE_GENERATED_ANIMATION', specsText);
     } else if (data.startsWith('fb_')) {
       const action = data.split('_')[1];
       await botInstance.answerCallbackQuery(query.id, { text: `Preference saved: ${action}!` }).catch(() => {});
@@ -1538,7 +1545,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
               `).run(bonus, affCode, strChatId);
             }
 
-            // Send VIP celebration welcome
+            // Send VIP celebration animation & card
             const vipWelcome = `🎉 *CONGRATULATIONS! VIP ACCESS UNLOCKED!*\n\n` +
               `Aapka account *${campaign.campaign_name}* (\`${campaign.code}\`) ke tehat activate ho gaya hai!\n\n` +
               `🎁 *VIP Welcome Perks:*\n` +
@@ -1548,7 +1555,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
               `• 🚀 Instant 0-Second VIP Generation Queue\n\n` +
               `👇 Niche diye gaye buttons se shuru karein ya direct prompt bhejein:`;
 
-            await sendSafeTelegramMessage(chatId, vipWelcome, { reply_markup: DESIGNER_KEYBOARD });
+            await sendCelebrationAnimation(botInstance, chatId, 'VIP_WELCOME_ANIMATION', vipWelcome, DESIGNER_KEYBOARD);
 
             // Notify Master Admin in real-time
             if (MASTER_ADMIN_CHAT_ID && botInstance) {
@@ -1597,7 +1604,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
                 VALUES (?, ?, ?, ?, ?, ?)
               `).run(`ref_${Date.now()}_${strChatId}`, referrerId, strChatId, msg.from?.first_name || 'New Designer', msg.from?.username || '', bonusCredits);
 
-              // Send real-time notification to referrer
+              // Send real-time celebration animation to referrer
               const referrerNotice = `🎉 *NEW DESIGNER JOINED VIA YOUR VIP LINK!*\n\n` +
                 `• *Referred Designer:* *${msg.from?.first_name || 'Designer'}* (@${msg.from?.username || 'n/a'})\n` +
                 `• *Reward:* 💰 *+${bonusCredits} AI Credits Added!*\n` +
@@ -1605,7 +1612,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
                 `• *Current Tier:* **${newTier}**\n\n` +
                 `Keep inviting peers to unlock Gold & Diamond VIP Perks!`;
               
-              await sendSafeTelegramMessage(referrerId, referrerNotice).catch(() => {});
+              await sendCelebrationAnimation(botInstance, referrerId, 'REFERRAL_REWARD_ANIMATION', referrerNotice).catch(() => {});
             }
           }
         }
