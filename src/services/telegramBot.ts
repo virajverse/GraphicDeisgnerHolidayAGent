@@ -11,7 +11,7 @@ import { scrapeInstagramProfile } from './instagramScraperEngine.js';
 import { agentQueue } from './requestQueueEngine.js';
 import { pruneDatabaseCache } from './dbPruner.js';
 import { runEventCheckAndAlert } from './scheduler.js';
-import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord } from '../types/database.js';
+import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord, AffiliateCampaignRecord } from '../types/database.js';
 import { EventContext, IdeationResult } from '../types/models.js';
 
 const ADMIN_CODE = process.env.ADMIN_INVITE_CODE || 'TALIYO2026';
@@ -135,6 +135,10 @@ export const ADMIN_INLINE_HUB = {
       { text: '👥 Active Designers', callback_data: 'adm_designers' }
     ],
     [
+      { text: '🔗 Affiliate Links', callback_data: 'adm_affiliates' },
+      { text: '🏆 Top Referrers', callback_data: 'adm_referrals' }
+    ],
+    [
       { text: '🔔 Pending Approvals', callback_data: 'adm_pending' },
       { text: '🚀 Trigger Radar', callback_data: 'adm_radar' }
     ],
@@ -143,10 +147,7 @@ export const ADMIN_INLINE_HUB = {
       { text: '👥 Community Ground', callback_data: 'adm_ground' }
     ],
     [
-      { text: '🏆 Top Referrers', callback_data: 'adm_referrals' },
-      { text: '⛔ Banned Users', callback_data: 'adm_banned' }
-    ],
-    [
+      { text: '⛔ Banned Users', callback_data: 'adm_banned' },
       { text: '📊 Deep Telemetry', callback_data: 'adm_telemetry' }
     ]
   ]
@@ -164,10 +165,11 @@ export const LANGUAGE_INLINE_KEYBOARD = {
 export const ADMIN_MASTER_KEYBOARD = {
   keyboard: [
     [{ text: '👑 Admin Control' }, { text: '👥 Active Designers' }],
+    [{ text: '🔗 Affiliate Hub' }, { text: '🏆 Top Referrers' }],
     [{ text: '🔔 Pending Approvals' }, { text: '🚀 Trigger Radar Scan' }],
     [{ text: '📢 Broadcast Hub' }, { text: '👥 Community Ground' }],
-    [{ text: '🏆 Top Referrers' }, { text: '⛔ Banned Users' }],
-    [{ text: '📊 Deep AI Telemetry' }, { text: '🎁 Invite & Earn' }]
+    [{ text: '⛔ Banned Users' }, { text: '📊 Deep AI Telemetry' }],
+    [{ text: '🎁 Invite & Earn' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -491,6 +493,167 @@ export async function handleTopReferrers(chatId: string | number) {
       ]
     }
   });
+}
+
+/**
+ * 🔗 Super Admin Affiliate & Partner Campaign Management Hub
+ */
+export async function handleAffiliateHub(chatId: string | number) {
+  if (!isMasterAdmin(chatId)) {
+    return await sendSafeTelegramMessage(chatId, '⛔ *Access Restricted:* Ye command sirf Super Admin ke liye hai.');
+  }
+
+  const campaigns: AffiliateCampaignRecord[] = db.prepare('SELECT * FROM affiliate_campaigns').all();
+  const totalConversions = campaigns.reduce((sum, c) => sum + (c.conversions_count || 0), 0);
+  const totalBonusCredits = campaigns.reduce((sum, c) => sum + ((c.conversions_count || 0) * (c.bonus_credits || 0)), 0);
+
+  let msg = `🔗 *SUPER ADMIN AFFILIATE & PARTNER CAMPAIGN HUB*\n\n` +
+    `Yahan se aap custom referral links, YouTube promos aur partner campaigns create aur track kar sakte hain!\n\n` +
+    `📊 *CAMPAIGN OVERVIEW:*\n` +
+    `• *Total Active Campaigns:* **${campaigns.length} Links**\n` +
+    `• *Total Partner Signups:* **${totalConversions} Designers**\n` +
+    `• *Total Bonus Credits Given:* **${totalBonusCredits} AI Credits**\n\n`;
+
+  if (campaigns.length === 0) {
+    msg += `_Abhi koi affiliate campaign create nahi kiya gaya hai._\n\n` +
+      `👉 *Naya link create karne ke liye type karein:*\n` +
+      `\`/createaffiliate CODE BONUS_CREDITS CAMPAIGN_NAME\`\n\n` +
+      `*(Example: \`/createaffiliate VIRAJVIP 150 YouTube Launch Promo\`)*\n`;
+  } else {
+    msg += `🏷️ *ACTIVE AFFILIATE & PROMO LINKS:*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    campaigns.forEach((camp, i) => {
+      const link = `https://t.me/${BOT_USERNAME}?start=aff_${camp.code}`;
+      const statusIcon = camp.is_active === 1 ? '🟢 ACTIVE' : '🔴 PAUSED';
+      msg += `*${i + 1}. ${camp.campaign_name}* [${statusIcon}]\n`;
+      msg += `   • *Code:* \`${camp.code}\`\n`;
+      msg += `   • *Bonus per User:* \`+${camp.bonus_credits} Credits\`\n`;
+      msg += `   • *Conversions:* **${camp.conversions_count || 0} Designers Joined**\n`;
+      msg += `   • *Deep Link:* \`${link}\`\n\n`;
+    });
+
+    msg += `🛠️ *COMMANDS:*\n` +
+      `• *Naya Link:* \`/createaffiliate CODE CREDITS NAME\`\n` +
+      `• *Pause/Resume:* \`/toggleaffiliate CODE\`\n` +
+      `• *Delete Link:* \`/deleteaffiliate CODE\`\n`;
+  }
+
+  const buttons = [
+    [
+      { text: '➕ New Affiliate Link', callback_data: 'adm_new_affiliate' },
+      { text: '🔄 Refresh Stats', callback_data: 'adm_affiliates' }
+    ],
+    [
+      { text: '📢 Broadcast Promo', callback_data: 'adm_broadcast' },
+      { text: '👑 Admin Menu', callback_data: 'adm_panel' }
+    ]
+  ];
+
+  return await sendSafeTelegramMessage(chatId, msg, {
+    reply_markup: { inline_keyboard: buttons }
+  });
+}
+
+/**
+ * ➕ Create New Custom Affiliate / Partner Deep Link
+ */
+export async function handleCreateAffiliateCommand(chatId: string | number, text: string) {
+  if (!isMasterAdmin(chatId)) {
+    return await sendSafeTelegramMessage(chatId, '⛔ *Access Restricted:* Sirf Super Admin affiliate links create kar sakta hai.');
+  }
+
+  // Format: /createaffiliate CODE BONUS_CREDITS CAMPAIGN_NAME
+  const raw = text.replace(/^\/(createaffiliate|newaffiliate|createpartner)\s*/i, '').trim();
+  const parts = raw.split(/\s+/);
+
+  if (!raw || parts.length < 1) {
+    const usage = `⚠️ *AFFILIATE LINK CREATION FORMAT:*\n\n` +
+      `\`/createaffiliate CODE BONUS_CREDITS CAMPAIGN_NAME\`\n\n` +
+      `📌 *Examples:*\n` +
+      `• \`/createaffiliate VIRAJVIP 150 YouTube Launch Campaign\`\n` +
+      `• \`/createaffiliate FESTIVE500 200 Diwali Special Promo\`\n` +
+      `• \`/createaffiliate INSTAPRO 100 Instagram Design Community\``;
+    return await sendSafeTelegramMessage(chatId, usage);
+  }
+
+  const rawCode = parts[0].toUpperCase().replace(/[^A-Z0-9_]/g, '');
+  if (!rawCode || rawCode.length < 3) {
+    return await sendSafeTelegramMessage(chatId, '❌ *Error:* Affiliate code kam se kam 3 characters (A-Z, 0-9) ka hona chahiye.');
+  }
+
+  const bonusCredits = parts.length > 1 && !isNaN(Number(parts[1])) ? Math.max(0, parseInt(parts[1], 10)) : 100;
+  const campaignName = parts.length > 2 ? parts.slice(2).join(' ') : (parts.length > 1 && isNaN(Number(parts[1])) ? parts.slice(1).join(' ') : `${rawCode} Campaign`);
+
+  // Check if code already exists
+  const existing: AffiliateCampaignRecord = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(rawCode);
+  if (existing) {
+    return await sendSafeTelegramMessage(chatId, `⚠️ *Duplicate Code:* Affiliate code \`${rawCode}\` already exist karta hai! Kripya dusra code use karein ya */affiliates* check karein.`);
+  }
+
+  const newId = `aff_${Date.now()}_${rawCode}`;
+  db.prepare(`
+    INSERT INTO affiliate_campaigns (id, code, campaign_name, creator_chat_id, bonus_credits, is_active)
+    VALUES (?, ?, ?, ?, ?, 1)
+  `).run(newId, rawCode, campaignName, chatId.toString(), bonusCredits);
+
+  const inviteLink = `https://t.me/${BOT_USERNAME}?start=aff_${rawCode}`;
+  const shareText = `🎨 Join Taliyo Creative Intelligence AI Agent!\nGet +${bonusCredits} Free AI Credits, Ahead-of-Time Festival Radar & 6 Ready-to-Design Concepts!\n\n👉 VIP Access Link: ${inviteLink}`;
+  const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
+
+  const successMsg = `🎉 *AFFILIATE CAMPAIGN LINK CREATED SUCCESSFULLY!*\n\n` +
+    `• *Campaign Title:* *${campaignName}*\n` +
+    `• *Campaign Code:* \`${rawCode}\`\n` +
+    `• *Bonus Credits:* \`+${bonusCredits} AI Credits / user\`\n` +
+    `• *Status:* 🟢 *Active & Live*\n\n` +
+    `🔗 *OFFICIAL DEEP-LINK:*\n` +
+    `\`${inviteLink}\`\n\n` +
+    `💡 *How It Works:*\n` +
+    `Jo bhi designer is link par click karke bot start karega, use turant **+${bonusCredits} bonus credits** milenge aur auto-approved ho jayega!\n\n` +
+    `👇 *Direct Share karein:*`;
+
+  const shareKeyboard = {
+    inline_keyboard: [
+      [
+        { text: '📲 Share to Telegram', url: telegramShareUrl },
+        { text: '📋 View All Affiliates', callback_data: 'adm_affiliates' }
+      ]
+    ]
+  };
+
+  return await sendSafeTelegramMessage(chatId, successMsg, { reply_markup: shareKeyboard });
+}
+
+/**
+ * ⏯️ Toggle Pause/Active Affiliate Campaign
+ */
+export async function handleToggleAffiliateCommand(chatId: string | number, code: string) {
+  if (!isMasterAdmin(chatId)) return;
+  const cleanCode = code.toUpperCase().trim();
+  const camp: AffiliateCampaignRecord = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(cleanCode);
+  if (!camp) {
+    return await sendSafeTelegramMessage(chatId, `❌ *Campaign Not Found:* Code \`${cleanCode}\` ka koi affiliate campaign nahi mila.`);
+  }
+
+  const newStatus = camp.is_active === 1 ? 0 : 1;
+  db.prepare('UPDATE affiliate_campaigns SET is_active = ? WHERE code = ?').run(newStatus, cleanCode);
+  const statusLabel = newStatus === 1 ? '🟢 ACTIVE & LIVE' : '🔴 PAUSED / DISABLED';
+  return await sendSafeTelegramMessage(chatId, `✅ Campaign *${camp.campaign_name}* (\`${cleanCode}\`) ab *${statusLabel}* hai.`);
+}
+
+/**
+ * 🗑️ Delete Affiliate Campaign
+ */
+export async function handleDeleteAffiliateCommand(chatId: string | number, code: string) {
+  if (!isMasterAdmin(chatId)) return;
+  const cleanCode = code.toUpperCase().trim();
+  const camp: AffiliateCampaignRecord = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(cleanCode);
+  if (!camp) {
+    return await sendSafeTelegramMessage(chatId, `❌ *Campaign Not Found:* Code \`${cleanCode}\` ka koi affiliate campaign nahi mila.`);
+  }
+
+  db.prepare('DELETE FROM affiliate_campaigns WHERE code = ?').run(cleanCode);
+  return await sendSafeTelegramMessage(chatId, `🗑️ Campaign *${camp.campaign_name}* (\`${cleanCode}\`) ko permanently delete kar diya gaya hai.`);
 }
 
 function getDaysRemaining(eventDateMMDD: string): number {
@@ -968,6 +1131,19 @@ export async function handleTelegramWebhookUpdate(update: any) {
     } else if (data === 'adm_referrals') {
       await botInstance.answerCallbackQuery(query.id, { text: '🏆 Loading Referral Leaderboard...' }).catch(() => {});
       return await handleTopReferrers(chatId);
+    } else if (data === 'adm_affiliates') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🔗 Loading Affiliate Hub...' }).catch(() => {});
+      return await handleAffiliateHub(chatId);
+    } else if (data === 'adm_new_affiliate') {
+      await botInstance.answerCallbackQuery(query.id, { text: '➕ Create Affiliate Link...' }).catch(() => {});
+      const guide = `➕ *CREATE CUSTOM AFFILIATE / PROMO LINK*\n\n` +
+        `Chat me command type karein:\n` +
+        `\`/createaffiliate CODE BONUS_CREDITS CAMPAIGN_NAME\`\n\n` +
+        `📌 *Examples:*\n` +
+        `• \`/createaffiliate VIRAJVIP 150 YouTube Launch Campaign\`\n` +
+        `• \`/createaffiliate FESTIVE500 200 Diwali Special Promo\`\n` +
+        `• \`/createaffiliate INSTAPRO 100 Instagram Design Community\``;
+      return await sendSafeTelegramMessage(chatId, guide);
     }
 
     // 👑 ADMIN INLINE ACTION HANDLERS
@@ -1290,50 +1466,107 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }
     }
 
-    // Handle deep-link referral detection on /start ref_XXXX
+    // Handle deep-link referral & affiliate campaign detection on /start
     if (text.startsWith('/start')) {
       const parts = text.split(/\s+/);
-      if (parts[1] && parts[1].startsWith('ref_')) {
-        const referrerId = parts[1].replace('ref_', '').trim();
-        const existingUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId);
-        
-        if (!existingUser && referrerId && referrerId !== strChatId) {
-          const referrer: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(referrerId);
-          if (referrer) {
-            // Save referrer association in onboarding tracker
-            const ob = onboardingTracker.get(strChatId) || { step: 'WAITING_DETAILS' };
-            (ob as any).referredBy = referrerId;
-            onboardingTracker.set(strChatId, ob);
+      if (parts[1]) {
+        const payload = parts[1].trim();
 
-            // Record referral and give credits
-            const bonusCredits = 50;
-            const newRefCount = (referrer.referral_count || 0) + 1;
-            const newCredits = (referrer.referral_credits || 0) + bonusCredits;
-            
-            let newTier: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND' = 'BRONZE';
-            if (newRefCount >= 30) newTier = 'DIAMOND';
-            else if (newRefCount >= 15) newTier = 'GOLD';
-            else if (newRefCount >= 5) newTier = 'SILVER';
+        // 1. Custom Affiliate / Partner Deep Link (/start aff_CODE or /start promo_CODE)
+        if (payload.startsWith('aff_') || payload.startsWith('promo_')) {
+          const affCode = payload.replace(/^(aff_|promo_)/, '').toUpperCase();
+          const campaign: AffiliateCampaignRecord = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(affCode);
 
-            db.prepare(`
-              UPDATE users SET referral_count = ?, referral_credits = ?, referral_tier = ?
-              WHERE telegram_chat_id = ?
-            `).run(newRefCount, newCredits, newTier, referrerId);
+          if (campaign && campaign.is_active === 1) {
+            // Increment campaign conversions count
+            db.prepare('UPDATE affiliate_campaigns SET conversions_count = conversions_count + 1 WHERE code = ?').run(affCode);
 
-            db.prepare(`
-              INSERT INTO referrals (id, referrer_chat_id, referred_chat_id, referred_name, referred_username, credits_awarded)
-              VALUES (?, ?, ?, ?, ?, ?)
-            `).run(`ref_${Date.now()}_${strChatId}`, referrerId, strChatId, msg.from?.first_name || 'New Designer', msg.from?.username || '', bonusCredits);
+            const bonus = campaign.bonus_credits || 100;
+            const existingUser: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId);
 
-            // Send real-time notification to referrer
-            const referrerNotice = `🎉 *NEW DESIGNER JOINED VIA YOUR VIP LINK!*\n\n` +
-              `• *Referred Designer:* *${msg.from?.first_name || 'Designer'}* (@${msg.from?.username || 'n/a'})\n` +
-              `• *Reward:* 💰 *+${bonusCredits} AI Credits Added!*\n` +
-              `• *Total Referrals:* **${newRefCount} Designers**\n` +
-              `• *Current Tier:* **${newTier}**\n\n` +
-              `Keep inviting peers to unlock Gold & Diamond VIP Perks!`;
-            
-            await sendSafeTelegramMessage(referrerId, referrerNotice).catch(() => {});
+            if (!existingUser) {
+              // Direct 1-click Auto-Approval and registration with VIP Welcome credits
+              db.prepare(`
+                INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, referral_credits, affiliate_campaign)
+                VALUES (?, ?, ?, ?, 1, 'DESIGNER', 'APPROVED', ?, ?)
+                ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED', referral_credits = referral_credits + ?, affiliate_campaign=?
+              `).run(`user_${strChatId}`, msg.from?.first_name || 'VIP Designer', msg.from?.username || '', strChatId, bonus, affCode, bonus, affCode);
+            } else {
+              db.prepare(`
+                UPDATE users SET referral_credits = referral_credits + ?, affiliate_campaign = ?
+                WHERE telegram_chat_id = ?
+              `).run(bonus, affCode, strChatId);
+            }
+
+            // Send VIP celebration welcome
+            const vipWelcome = `🎉 *CONGRATULATIONS! VIP ACCESS UNLOCKED!*\n\n` +
+              `Aapka account *${campaign.campaign_name}* (\`${campaign.code}\`) ke tehat activate ho gaya hai!\n\n` +
+              `🎁 *VIP Welcome Perks:*\n` +
+              `• 💰 *+${bonus} AI Credits* credited to your wallet!\n` +
+              `• ⚡ Ahead-of-Time Cultural & Festival Radar Alerts\n` +
+              `• 🎨 6 Ready-to-Design Concepts per briefing\n` +
+              `• 🚀 Instant 0-Second VIP Generation Queue\n\n` +
+              `👇 Niche diye gaye buttons se shuru karein ya direct prompt bhejein:`;
+
+            await sendSafeTelegramMessage(chatId, vipWelcome, { reply_markup: DESIGNER_KEYBOARD });
+
+            // Notify Master Admin in real-time
+            if (MASTER_ADMIN_CHAT_ID && botInstance) {
+              const adminAffNotice = `💎 *[AFFILIATE CONVERSION]* New Designer Joined!\n\n` +
+                `• *Campaign:* *${campaign.campaign_name}* (\`${campaign.code}\`)\n` +
+                `• *Designer:* *${msg.from?.first_name || 'Designer'}* (@${msg.from?.username || 'n/a'})\n` +
+                `• *Chat ID:* \`${strChatId}\`\n` +
+                `• *Bonus Credits Granted:* \`+${bonus} Credits\`\n` +
+                `• *Total Campaign Signups:* **${(campaign.conversions_count || 0) + 1}**`;
+              await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, adminAffNotice);
+            }
+            return;
+          }
+        }
+
+        // 2. Peer-to-Peer Designer Referral (/start ref_CHATID)
+        if (payload.startsWith('ref_')) {
+          const referrerId = payload.replace('ref_', '').trim();
+          const existingUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId);
+          
+          if (!existingUser && referrerId && referrerId !== strChatId) {
+            const referrer: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(referrerId);
+            if (referrer) {
+              // Save referrer association in onboarding tracker
+              const ob = onboardingTracker.get(strChatId) || { step: 'WAITING_DETAILS' };
+              (ob as any).referredBy = referrerId;
+              onboardingTracker.set(strChatId, ob);
+
+              // Record referral and give credits
+              const bonusCredits = 50;
+              const newRefCount = (referrer.referral_count || 0) + 1;
+              const newCredits = (referrer.referral_credits || 0) + bonusCredits;
+              
+              let newTier: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND' = 'BRONZE';
+              if (newRefCount >= 30) newTier = 'DIAMOND';
+              else if (newRefCount >= 15) newTier = 'GOLD';
+              else if (newRefCount >= 5) newTier = 'SILVER';
+
+              db.prepare(`
+                UPDATE users SET referral_count = ?, referral_credits = ?, referral_tier = ?
+                WHERE telegram_chat_id = ?
+              `).run(newRefCount, newCredits, newTier, referrerId);
+
+              db.prepare(`
+                INSERT INTO referrals (id, referrer_chat_id, referred_chat_id, referred_name, referred_username, credits_awarded)
+                VALUES (?, ?, ?, ?, ?, ?)
+              `).run(`ref_${Date.now()}_${strChatId}`, referrerId, strChatId, msg.from?.first_name || 'New Designer', msg.from?.username || '', bonusCredits);
+
+              // Send real-time notification to referrer
+              const referrerNotice = `🎉 *NEW DESIGNER JOINED VIA YOUR VIP LINK!*\n\n` +
+                `• *Referred Designer:* *${msg.from?.first_name || 'Designer'}* (@${msg.from?.username || 'n/a'})\n` +
+                `• *Reward:* 💰 *+${bonusCredits} AI Credits Added!*\n` +
+                `• *Total Referrals:* **${newRefCount} Designers**\n` +
+                `• *Current Tier:* **${newTier}**\n\n` +
+                `Keep inviting peers to unlock Gold & Diamond VIP Perks!`;
+              
+              await sendSafeTelegramMessage(referrerId, referrerNotice).catch(() => {});
+            }
           }
         }
       }
@@ -1358,21 +1591,42 @@ export async function handleTelegramWebhookUpdate(update: any) {
         const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get()?.count || 1;
         const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;
         const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get()?.count || 0;
+        const affCount = db.prepare('SELECT COUNT(*) as count FROM affiliate_campaigns').get()?.count || 0;
 
         const adminPanelMsg = `👑 *TALIYO SUPER ADMIN MASTER CONTROL SUITE*\n\n` +
           `• *Approved Designers:* ${usersCount} Active Accounts\n` +
+          `• *Affiliate Campaigns:* ${affCount} Custom Links Active\n` +
           `• *Total Briefings Dispatched:* ${alertsCount} Briefs\n` +
           `• *Generated Concepts:* ${ideasCount} Ideas\n` +
           `• *Cluster Engine:* 27-Model Resilient Cascade Active\n` +
           `• *Cloud DB:* Turso Cloud SQLite (AWS Mumbai)\n\n` +
           `⚡ *Quick Admin Commands:*\n` +
+          `• \`/createaffiliate CODE CREDITS NAME\`\n` +
           `• \`/addevent Name | MM-DD | Category | Score\`\n` +
           `• \`/addclient Name | Industry | Audience | Tone\`\n` +
-          `• \`/makeadmin CHAT_ID\`\n` +
+          `• \`/addcredits CHAT_ID AMOUNT\`\n` +
           `• \`/prunecache\`\n\n` +
           `👇 *Tap any admin button below to execute instant controls:*`;
         
         return await sendSafeTelegramMessage(chatId, adminPanelMsg, { reply_markup: ADMIN_MASTER_KEYBOARD });
+      }
+
+      if (text === '🔗 Affiliate Hub' || text === '/affiliates' || text === '/affiliatelist') {
+        return await handleAffiliateHub(chatId);
+      }
+
+      if (text.startsWith('/createaffiliate') || text.startsWith('/newaffiliate') || text.startsWith('/createpartner')) {
+        return await handleCreateAffiliateCommand(chatId, text);
+      }
+
+      if (text.startsWith('/toggleaffiliate')) {
+        const targetCode = text.replace('/toggleaffiliate', '').trim();
+        return await handleToggleAffiliateCommand(chatId, targetCode);
+      }
+
+      if (text.startsWith('/deleteaffiliate')) {
+        const targetCode = text.replace('/deleteaffiliate', '').trim();
+        return await handleDeleteAffiliateCommand(chatId, targetCode);
       }
 
       if (text === '📢 Broadcast Hub' || text === '/broadcast') {

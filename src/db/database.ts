@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { createClient, Client } from '@libsql/client';
-import { UserRecord, ClientRecord, EventRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord } from '../types/database.js';
+import { UserRecord, ClientRecord, EventRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord, AffiliateCampaignRecord } from '../types/database.js';
 
 const tursoUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
@@ -24,6 +24,7 @@ const memCache = {
   alerts: new Map<string, AlertRecord>(),
   creative_ideas: new Map<string, CreativeIdeaRecord>(),
   referrals: new Map<string, ReferralRecord>(),
+  affiliate_campaigns: new Map<string, AffiliateCampaignRecord>(),
   settings: new Map<string, { key: string; value: string; is_enabled: number }>()
 };
 
@@ -61,6 +62,7 @@ const db = {
           if (sql.includes('FROM clients')) return { count: memCache.clients.size || 2 };
           if (sql.includes('FROM alerts')) return { count: memCache.alerts.size || 0 };
           if (sql.includes('FROM creative_ideas')) return { count: memCache.creative_ideas.size || 0 };
+          if (sql.includes('FROM affiliate_campaigns')) return { count: memCache.affiliate_campaigns.size || 0 };
           if (sql.includes('FROM referrals')) {
             if (sql.includes('referrer_chat_id = ?')) {
               const refChatId = args[0]?.toString();
@@ -121,6 +123,20 @@ const db = {
           return Array.from(memCache.referrals.values());
         }
 
+        if (sql.includes('FROM affiliate_campaigns')) {
+          if (sql.includes('code = ?')) {
+            const code = args[0]?.toString().toUpperCase();
+            for (const camp of memCache.affiliate_campaigns.values()) {
+              if (camp.code.toUpperCase() === code) return camp;
+            }
+            return null;
+          }
+          if (sql.includes('id = ?')) {
+            return memCache.affiliate_campaigns.get(args[0]) || null;
+          }
+          return Array.from(memCache.affiliate_campaigns.values())[0] || null;
+        }
+
         if (sql.includes('FROM agent_logs')) {
           return { id: 1, run_time: new Date().toISOString(), duration_ms: 320, status: 'SUCCESS' };
         }
@@ -153,6 +169,9 @@ const db = {
           }
           return Array.from(memCache.referrals.values());
         }
+        if (sql.includes('FROM affiliate_campaigns')) {
+          return Array.from(memCache.affiliate_campaigns.values()).sort((a, b) => (b.conversions_count || 0) - (a.conversions_count || 0));
+        }
         return [];
       },
 
@@ -161,6 +180,64 @@ const db = {
         tursoClient.execute({ sql, args }).catch(err => {
           console.warn(`[Turso Cloud Write Warning]: ${err.message}`);
         });
+
+        // Instant In-Memory Cache Update for 0ms latency
+        if (sql.includes('INTO affiliate_campaigns')) {
+          const affObj: AffiliateCampaignRecord = {
+            id: args[0],
+            code: args[1]?.toString().toUpperCase(),
+            campaign_name: args[2] || 'Affiliate Campaign',
+            creator_chat_id: args[3]?.toString(),
+            bonus_credits: args[4] !== undefined ? Number(args[4]) : 100,
+            clicks_count: 0,
+            conversions_count: 0,
+            is_active: args[5] !== undefined ? Number(args[5]) : 1,
+            created_at: new Date().toISOString()
+          };
+          memCache.affiliate_campaigns.set(affObj.id, affObj);
+        }
+
+        if (sql.includes('UPDATE affiliate_campaigns')) {
+          if (sql.includes('conversions_count = conversions_count + 1') || sql.includes('conversions_count = ?')) {
+            const code = args[args.length - 1]?.toString().toUpperCase();
+            for (const camp of memCache.affiliate_campaigns.values()) {
+              if (camp.code.toUpperCase() === code || camp.id === code) {
+                camp.conversions_count = (camp.conversions_count || 0) + 1;
+              }
+            }
+          } else if (sql.includes('is_active = ?')) {
+            const isActive = Number(args[0]);
+            const code = args[1]?.toString().toUpperCase();
+            for (const camp of memCache.affiliate_campaigns.values()) {
+              if (camp.code.toUpperCase() === code || camp.id === code) {
+                camp.is_active = isActive;
+              }
+            }
+          } else if (sql.includes('is_active = 0')) {
+            const code = args[0]?.toString().toUpperCase();
+            for (const camp of memCache.affiliate_campaigns.values()) {
+              if (camp.code.toUpperCase() === code || camp.id === code) {
+                camp.is_active = 0;
+              }
+            }
+          } else if (sql.includes('is_active = 1')) {
+            const code = args[0]?.toString().toUpperCase();
+            for (const camp of memCache.affiliate_campaigns.values()) {
+              if (camp.code.toUpperCase() === code || camp.id === code) {
+                camp.is_active = 1;
+              }
+            }
+          }
+        }
+
+        if (sql.includes('DELETE FROM affiliate_campaigns')) {
+          const code = args[0]?.toString().toUpperCase();
+          for (const [id, camp] of memCache.affiliate_campaigns.entries()) {
+            if (camp.code.toUpperCase() === code || camp.id === code) {
+              memCache.affiliate_campaigns.delete(id);
+            }
+          }
+        }
 
         // Instant In-Memory Cache Update for 0ms latency
         if (sql.includes('INTO referrals')) {
@@ -360,6 +437,18 @@ export async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS affiliate_campaigns (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      campaign_name TEXT NOT NULL,
+      creator_chat_id TEXT NOT NULL,
+      bonus_credits INTEGER DEFAULT 100,
+      clicks_count INTEGER DEFAULT 0,
+      conversions_count INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS system_settings (
       key TEXT PRIMARY KEY,
       value TEXT,
@@ -387,8 +476,13 @@ export async function initDatabase() {
       "ALTER TABLE users ADD COLUMN referred_by TEXT;",
       "ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0;",
       "ALTER TABLE users ADD COLUMN referral_credits INTEGER DEFAULT 0;",
-      "ALTER TABLE users ADD COLUMN referral_tier TEXT DEFAULT 'BRONZE';"
+      "ALTER TABLE users ADD COLUMN referral_tier TEXT DEFAULT 'BRONZE';",
+      "ALTER TABLE users ADD COLUMN affiliate_campaign TEXT;"
     ];
+
+    for (const sql of migrations) {
+      await tursoClient.execute(sql).catch(() => {});
+    }
 
     // Sync & Hydrate all existing records from Turso Cloud into memCache
     try {
@@ -408,7 +502,11 @@ export async function initDatabase() {
       for (const row of referralsRes.rows) {
         memCache.referrals.set(row.id as string, row as any);
       }
-      console.log(`[Database] 🚀 Cloud In-Memory Hydrated: ${memCache.users.size} Users, ${memCache.events.size} Events, ${memCache.clients.size} Clients, ${memCache.referrals.size} Referrals`);
+      const affRes = await tursoClient.execute("SELECT * FROM affiliate_campaigns");
+      for (const row of affRes.rows) {
+        memCache.affiliate_campaigns.set(row.id as string, row as any);
+      }
+      console.log(`[Database] 🚀 Cloud In-Memory Hydrated: ${memCache.users.size} Users, ${memCache.events.size} Events, ${memCache.clients.size} Clients, ${memCache.referrals.size} Referrals, ${memCache.affiliate_campaigns.size} Affiliates`);
     } catch (e: any) {
       console.warn(`[Database Cache Hydration]: ${e.message}`);
     }

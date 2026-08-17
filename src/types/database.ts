@@ -26,6 +26,7 @@ export interface UserRecord {
   referral_count?: number;
   referral_credits?: number;
   referral_tier?: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND';
+  affiliate_campaign?: string;
   registered_at?: string;
   updated_at?: string;
 }
@@ -37,6 +38,18 @@ export interface ReferralRecord {
   referred_name?: string;
   referred_username?: string;
   credits_awarded: number;
+  created_at?: string;
+}
+
+export interface AffiliateCampaignRecord {
+  id: string;
+  code: string;
+  campaign_name: string;
+  creator_chat_id: string;
+  bonus_credits: number;
+  clicks_count: number;
+  conversions_count: number;
+  is_active: number;
   created_at?: string;
 }
 

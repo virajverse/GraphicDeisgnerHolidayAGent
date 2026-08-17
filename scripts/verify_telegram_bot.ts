@@ -154,7 +154,31 @@ async function runFullAudit() {
   // 7. KEYBOARDS & DOCKED ACTION HUBS
   console.log('\n⌨️ STEP 7: Verifying Keyboards & User Navigation...');
   check('Keyboards', 'Designer Reply Keyboard', DESIGNER_KEYBOARD.keyboard.some(row => row.some(b => b.text.includes('Invite & Earn'))), 'Contains Invite & Earn button');
-  check('Keyboards', 'Admin Master Keyboard', ADMIN_MASTER_KEYBOARD.keyboard.some(row => row.some(b => b.text.includes('Admin Control'))), 'Contains Super Admin Control hub');
+  check('Keyboards', 'Admin Master Keyboard', ADMIN_MASTER_KEYBOARD.keyboard.some(row => row.some(b => b.text.includes('Affiliate Hub'))), 'Contains Affiliate Hub button');
+
+  // 8. AFFILIATE & CAMPAIGN ENGINE (ADMIN POWER)
+  console.log('\n🔗 STEP 8: Verifying Super Admin Affiliate & Deep Link Engine...');
+  const testCode = `TESTVIP_${Date.now()}`;
+  db.prepare(`
+    INSERT INTO affiliate_campaigns (id, code, campaign_name, creator_chat_id, bonus_credits, is_active)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(`aff_${Date.now()}`, testCode, 'VIP Creator Launch Audit', '1634951702', 150, 1);
+
+  const affRecord = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(testCode);
+  check('Affiliate Engine', 'Create & Query Campaign', Boolean(affRecord && affRecord.code === testCode && affRecord.bonus_credits === 150), `Code: ${testCode}, Bonus: ${affRecord?.bonus_credits} Credits`);
+
+  // Simulate user conversion on deep link
+  db.prepare('UPDATE affiliate_campaigns SET conversions_count = conversions_count + 1 WHERE code = ?').run(testCode);
+  const updatedAff = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(testCode);
+  check('Affiliate Engine', 'Conversion Tracking', updatedAff?.conversions_count === 1, `Conversions recorded: ${updatedAff?.conversions_count}`);
+
+  // Test toggle active status
+  db.prepare('UPDATE affiliate_campaigns SET is_active = 0 WHERE code = ?').run(testCode);
+  const pausedAff = db.prepare('SELECT * FROM affiliate_campaigns WHERE code = ?').get(testCode);
+  check('Affiliate Engine', 'Pause/Resume Campaign Control', pausedAff?.is_active === 0, `Status successfully paused`);
+
+  // Clean test campaign
+  db.prepare('DELETE FROM affiliate_campaigns WHERE code = ?').run(testCode);
 
   // SUMMARY REPORT
   console.log('\n======================================================');
