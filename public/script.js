@@ -13,7 +13,7 @@
   const BG_COLOR = '#0a0a0a';
   const TOTAL_FRAMES = 240;
 
-  // Generic Reusable Sequencer Class
+  // Generic Reusable Sequencer Class with Smart Adaptive Frame Preloader & Fallback
   class PinnedStoryEngine {
     constructor(config) {
       this.section = document.getElementById(config.sectionId);
@@ -27,25 +27,61 @@
       this.scrollCue = document.getElementById(config.scrollCueId);
       this.onProgress = config.onProgress || null;
       this.totalFrames = config.totalFrames || TOTAL_FRAMES;
-      this.lerpSpeed = config.lerpSpeed || 0.14;
+      this.lerpSpeed = config.lerpSpeed || 0.16;
 
-      this.images = [];
+      this.images = new Array(this.totalFrames);
+      this.loadedStatus = new Array(this.totalFrames).fill(false);
+      this.lastLoadedImg = null;
       this.currentFrame = 0;
       this.targetFrame = 0;
       this.isManual = false;
 
-      this.preload();
+      // Priority Preload initial batch
+      this.preloadInitial();
       this.resize();
     }
 
-    preload() {
-      for (let i = 1; i <= this.totalFrames; i++) {
-        const img = new Image();
-        img.src = `${this.framesDir}/${this.filePattern(i)}`;
-        img.onload = () => {
-          if (i === 1) this.render(0);
-        };
-        this.images.push(img);
+    getFrameUrl(frameNum) {
+      return `${this.framesDir}/${this.filePattern(frameNum)}`;
+    }
+
+    requestFrame(index) {
+      if (index < 0 || index >= this.totalFrames) return null;
+      if (this.images[index]) return this.images[index];
+
+      const img = new Image();
+      img.src = this.getFrameUrl(index + 1);
+      img.onload = () => {
+        this.loadedStatus[index] = true;
+        if (!this.lastLoadedImg) {
+          this.lastLoadedImg = img;
+        }
+        if (Math.abs(Math.round(this.currentFrame) - index) < 3) {
+          this.render(Math.round(this.currentFrame));
+        }
+      };
+      this.images[index] = img;
+      return img;
+    }
+
+    preloadInitial() {
+      // Preload first 25 frames immediately for instant rendering
+      for (let i = 0; i < Math.min(25, this.totalFrames); i++) {
+        this.requestFrame(i);
+      }
+      // Preload the rest asynchronously in chunks
+      setTimeout(() => {
+        for (let i = 25; i < this.totalFrames; i++) {
+          this.requestFrame(i);
+        }
+      }, 200);
+    }
+
+    preloadWindow(centerIdx) {
+      const start = Math.max(0, centerIdx - 35);
+      const end = Math.min(this.totalFrames - 1, centerIdx + 50);
+      for (let i = start; i <= end; i++) {
+        this.requestFrame(i);
       }
     }
 
@@ -70,14 +106,43 @@
       const w = rect.width || window.innerWidth;
       const h = rect.height || window.innerHeight;
 
+      const safeIdx = Math.max(0, Math.min(this.totalFrames - 1, frameIdx));
+      let img = this.images[safeIdx];
+
+      // If requested image is not loaded yet, find nearest loaded image or use last loaded
+      if (!img || !this.loadedStatus[safeIdx] || !img.complete || img.naturalWidth === 0) {
+        // Request it right away
+        this.requestFrame(safeIdx);
+
+        // Search nearest loaded frame
+        let fallback = null;
+        for (let offset = 1; offset < 20; offset++) {
+          const prev = safeIdx - offset;
+          if (prev >= 0 && this.loadedStatus[prev] && this.images[prev]?.complete) {
+            fallback = this.images[prev];
+            break;
+          }
+          const next = safeIdx + offset;
+          if (next < this.totalFrames && this.loadedStatus[next] && this.images[next]?.complete) {
+            fallback = this.images[next];
+            break;
+          }
+        }
+
+        img = fallback || this.lastLoadedImg;
+        if (!img || !img.complete || img.naturalWidth === 0) {
+          this.ctx.fillStyle = BG_COLOR;
+          this.ctx.fillRect(0, 0, w, h);
+          return;
+        }
+      } else {
+        this.lastLoadedImg = img;
+      }
+
       this.ctx.fillStyle = BG_COLOR;
       this.ctx.fillRect(0, 0, w, h);
 
-      const safeIdx = Math.max(0, Math.min(this.totalFrames - 1, frameIdx));
-      const img = this.images[safeIdx];
-      if (!img || !img.complete || img.naturalWidth === 0) return;
-
-      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const imgRatio = img.naturalWidth / img.naturalHeight || (16 / 9);
       const screenRatio = w / h;
       let drawW, drawH, offsetX, offsetY;
 
@@ -109,6 +174,7 @@
       const progress = Math.max(0, Math.min(1, rawProgress));
 
       this.targetFrame = progress * (this.totalFrames - 1);
+      this.preloadWindow(Math.round(this.targetFrame));
 
       if (this.counter) {
         const currentInt = Math.min(this.totalFrames, Math.max(1, Math.round(this.targetFrame) + 1));
@@ -126,6 +192,7 @@
 
     setTargetFrame(frame) {
       this.targetFrame = Math.max(0, Math.min(this.totalFrames - 1, frame));
+      this.preloadWindow(Math.round(this.targetFrame));
       if (this.counter) {
         const currentInt = Math.min(this.totalFrames, Math.max(1, Math.round(this.targetFrame) + 1));
         this.counter.textContent = `FRAME ${String(currentInt).padStart(3, '0')}/${this.totalFrames}`;

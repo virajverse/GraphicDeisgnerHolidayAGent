@@ -6,6 +6,17 @@
       "destination": "/api/index.js"
     }
   ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(jpg|jpeg|png|webp|svg|css|js)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
   "crons": [
     {
       "path": "/api/alerts/trigger",
