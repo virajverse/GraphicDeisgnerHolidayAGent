@@ -22,6 +22,11 @@ export interface UserRecord {
   ban_reason?: string;
   verification_screenshot_id?: string;
   instagram_handle?: string;
+  email?: string;
+  phone_number?: string;
+  is_phone_verified?: number;
+  discovery_source?: string;
+  registration_code?: string;
   referred_by?: string;
   referral_count?: number;
   referral_credits?: number;

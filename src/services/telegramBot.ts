@@ -78,8 +78,82 @@ function checkSpamAndBanStatus(chatId: string | number): { isBanned: boolean; is
 // Anti-Brute Force Passcode Tracker
 const bruteForceTracker = new Map<string, { attempts: number; lockedUntil: number }>();
 
-// Smart Onboarding & Screenshot Verification Tracker
-const onboardingTracker = new Map<string, { step: 'WAITING_DETAILS' | 'WAITING_SCREENSHOT'; name?: string; handle?: string; youtubeName?: string }>();
+// 5-Step Secure Registration & Onboarding Tracker
+export interface OnboardingSession {
+  step: 'ASK_NAME' | 'ASK_EMAIL' | 'ASK_PHONE' | 'ASK_SOURCE' | 'ASK_CODE';
+  name?: string;
+  email?: string;
+  phone?: string;
+  is_phone_verified?: number;
+  source?: string;
+  invite_code?: string;
+  referredBy?: string;
+  instagram_handle?: string;
+}
+
+export const onboardingTracker = new Map<string, OnboardingSession>();
+
+export function isValidEmail(email: string): { valid: boolean; reason?: string } {
+  if (!email || typeof email !== 'string') return { valid: false, reason: 'Email field cannot be empty.' };
+  const trimmed = email.trim().toLowerCase();
+
+  // RFC 5322 Standard Syntax Check
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmed)) {
+    return { valid: false, reason: 'Invalid email syntax (e.g. name@domain.com).' };
+  }
+
+  // Blacklist disposable & fake email domains
+  const blockedDomains = [
+    'tempmail.com', '10minutemail.com', 'guerrillamail.com', 'mailinator.com',
+    'trashmail.com', 'fake.com', 'test.com', 'example.com', 'random.com',
+    'yopmail.com', 'sharklasers.com', 'dispostable.com', 'getnada.com',
+    'throwawaymail.com', 'burnermail.io', 'mytemp.email', 'dropmail.me'
+  ];
+
+  const domain = trimmed.split('@')[1];
+  if (blockedDomains.some(b => domain === b || domain.endsWith('.' + b))) {
+    return { valid: false, reason: 'Temporary / disposable fake emails are strictly forbidden. Please use a genuine email.' };
+  }
+
+  return { valid: true };
+}
+
+export const PHONE_VERIFY_KEYBOARD = {
+  keyboard: [
+    [{ text: '📱 Share Verified Telegram Number', request_contact: true }],
+    [{ text: '❌ Cancel Registration' }]
+  ],
+  resize_keyboard: true,
+  one_time_keyboard: true
+};
+
+export const DISCOVERY_SOURCE_INLINE = {
+  inline_keyboard: [
+    [
+      { text: '📺 YouTube (@VirajVerse016)', callback_data: 'src_youtube' },
+      { text: '📸 Instagram (@fearless.devx)', callback_data: 'src_instagram' }
+    ],
+    [
+      { text: '👥 Friend / Colleague Referral', callback_data: 'src_referral' },
+      { text: '💼 LinkedIn / Agency', callback_data: 'src_linkedin' }
+    ],
+    [
+      { text: '🌐 Google / Other', callback_data: 'src_other' }
+    ]
+  ]
+};
+
+export const STEP5_CODE_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '🎁 Get Free Code (Social Tasks)', callback_data: 'get_free_code' }
+    ],
+    [
+      { text: '💬 Contact Owner (@virajverse)', url: 'https://t.me/virajverse' }
+    ]
+  ]
+};
 
 function checkUserCooldown(chatId: string | number): { allowed: boolean; remainingSec: number } {
   const strId = chatId.toString();
@@ -277,14 +351,45 @@ async function sendSafeSingleMessage(chatId: string | number, text: string, opti
 }
 
 export async function sendAccessGatewayCard(chatId: string | number) {
+  const strChatId = chatId.toString();
+  const existingUser: UserRecord | null = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId) || null;
+
+  // 1. IF ALREADY REGISTERED IN DATABASE: DO NOT SHOW FREE REGISTRATION BUTTON
+  if (existingUser) {
+    if (existingUser.is_approved === 1) {
+      const welcomeBack = `✨ *WELCOME BACK, ${existingUser.name || 'DESIGNER'}!*\n\n` +
+        `Aapka account already **Verified & Active** hai.\n\n` +
+        `🚀 *Creative Studio Toolbar Online:*\n` +
+        `Niche diye gaye buttons se shuru karein ya direct koi prompt likhein:`;
+      return await sendSafeTelegramMessage(chatId, welcomeBack, {
+        reply_markup: getUserKeyboard(chatId)
+      });
+    } else {
+      const registeredLoginKeyboard = {
+        inline_keyboard: [
+          [{ text: '🔑 Enter Passcode to Unlock', callback_data: 'gate_login' }],
+          [{ text: '💬 Contact Admin', callback_data: 'menu_contact' }]
+        ]
+      };
+      const pendingMsg = `🔒 *ACCOUNT REGISTERED & PENDING*\n\n` +
+        `• *Registered Name:* **${existingUser.name}**\n` +
+        `• *Status:* ⏳ Pending Activation\n\n` +
+        `Apna authorized passcode enter karke direct unlock karein:`;
+      return await sendSafeTelegramMessage(chatId, pendingMsg, {
+        reply_markup: registeredLoginKeyboard
+      });
+    }
+  }
+
+  // 2. BRAND NEW USER: SHOW FREE REGISTRATION (TASK VERIFICATION) & DIRECT PASSCODE LOGIN
   const gatewayMsg = `🔒 *TALIYO CREATIVE INTELLIGENCE | ACCESS GATEWAY*\n\n` +
-    `Namaste Designer! Main aapka **Senior Graphic Design Strategy & Ahead-of-Time Trend AI Partner** hoon.\n\n` +
+    `Namaste Designer! Main aapka **Senior Graphic Design Strategy & 3D Render Partner** hoon.\n\n` +
     `⚡ *Aapko kya milta hai:*\n` +
-    `• Ahead-of-Time Festival & Holiday Radar Alerts (T-2 Days in advance)\n` +
-    `• Real-World Scraped News & Cultural Trend Context\n` +
-    `• 6 Ready-to-Design Concept Angles per event (Educational, 3D, Emotional)\n` +
-    `• Instant Hex Color Palettes & Font Pairings for Figma/Photoshop\n\n` +
-    `👇 *Access ke liye niche se ek option select karein:*`;
+    `• Ahead-of-Time Cultural & Festival Radar Alerts (T-2 Days in advance)\n` +
+    `• Isolated 8K 3D Visual Centerpieces (Zero-Text, Ready for Figma)\n` +
+    `• 6 Ready-to-Design Concept Archetypes per occasion\n` +
+    `• Mathematical CIE-Lab Hex Palettes & Font Pairings\n\n` +
+    `👇 *Shuru karne ke liye niche se ek option select karein:*`;
 
   return await sendSafeTelegramMessage(chatId, gatewayMsg, {
     reply_markup: GATEWAY_INLINE_KEYBOARD
@@ -1212,7 +1317,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
     if (data === 'gate_register') {
       await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => { });
-      onboardingTracker.set(chatId.toString(), { step: 'WAITING_DETAILS' });
+      onboardingTracker.set(chatId.toString(), { step: 'ASK_NAME' });
 
       const igPath = path.join(process.cwd(), 'public/assets/instagram_banner.png');
       const ytPath = path.join(process.cwd(), 'public/assets/youtube_banner.png');
@@ -1239,10 +1344,13 @@ export async function handleTelegramWebhookUpdate(update: any) {
         }).catch(() => { });
       }
 
-      // 3. Send Instruction for details
-      const regStepPrompt = `👇 *Follow & Subscribe karne ke baad, chat me apni details bhejiye:*\n\n` +
-        `\`Full Name | Instagram Handle | YouTube Channel Name\`\n\n` +
-        `*(Example: Rahul Sharma | @rahul_graphics | @RahulDesignsYT)*`;
+      // 3. Send Instruction for 5-Step Verified Onboarding with Unlocked Code
+      const regStepPrompt = `🎁 *FREE REGISTRATION CODE UNLOCKED!*\n\n` +
+        `Instagram follow aur YouTube subscribe karne ke baad aapka **Free Access Passcode** generate ho gaya hai:\n` +
+        `👉 *Your Free Access Code:* \`TALIYO2026\`\n\n` +
+        `Ab is code se apna verified designer profile activate karne ke liye 5-step details enter karein:\n\n` +
+        `📝 *STEP 1 OF 5 // FULL NAME*\n` +
+        `👉 *Type your Full Name in chat to continue:*`;
       return await sendSafeTelegramMessage(chatId, regStepPrompt);
     }
 
@@ -1430,6 +1538,78 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, guide);
     }
 
+    if (data === 'gate_register') {
+      await botInstance.answerCallbackQuery(query.id, { text: '📝 Starting Registration...' }).catch(() => { });
+      onboardingTracker.set(chatId, { step: 'ASK_NAME' });
+      const regPrompt = `📝 *STEP 1 OF 5 // DESIGNER REGISTRATION*\n\n` +
+        `Welcome to *Taliyo DesignOS*!\n` +
+        `Aapka verified designer profile banane ke liye please apna **Poora Naam (Full Name)** enter karein:\n\n` +
+        `👉 *Type your full name in chat:*`;
+      return await sendSafeTelegramMessage(chatId, regPrompt);
+    } else if (data === 'gate_login') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🔑 Passcode Login...' }).catch(() => { });
+      onboardingTracker.set(chatId, { step: 'ASK_CODE' });
+      const loginPrompt = `🔑 *TALIYO DIRECT PASSCODE LOGIN*\n\n` +
+        `Apna authorized Registration / Invitation Passcode enter karein:\n\n` +
+        `👉 *Type your passcode in chat* (e.g. \`YOUR_PASSCODE\`):\n\n` +
+        `_(Agar aapke paas code nahi hai toh niche buttons se free code lein ya Owner se contact karein)_`;
+      return await sendSafeTelegramMessage(chatId, loginPrompt, { reply_markup: STEP5_CODE_KEYBOARD });
+    } else if (data === 'get_free_code') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🎁 Unlocking Free Code...' }).catch(() => { });
+
+      const igPath = path.join(process.cwd(), 'public/assets/instagram_banner.png');
+      const ytPath = path.join(process.cwd(), 'public/assets/youtube_banner.png');
+
+      if (fs.existsSync(igPath) && botInstance) {
+        await botInstance.sendPhoto(chatId, igPath, {
+          caption: `📸 *STEP 1: FOLLOW ON INSTAGRAM*\n\n👉 Official Profile: [@fearless.devx](https://www.instagram.com/fearless.devx/)\nTap the button below to follow!`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '📸 Follow @fearless.devx', url: 'https://www.instagram.com/fearless.devx/' }]]
+          }
+        }).catch(() => { });
+      }
+
+      if (fs.existsSync(ytPath) && botInstance) {
+        await botInstance.sendPhoto(chatId, ytPath, {
+          caption: `▶️ *STEP 2: SUBSCRIBE ON YOUTUBE*\n\n👉 Official Channel: [@VirajVerse016](https://www.youtube.com/@VirajVerse016)\nTap the button below to subscribe!`,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: '▶️ Subscribe @VirajVerse016', url: 'https://www.youtube.com/@VirajVerse016' }]]
+          }
+        }).catch(() => { });
+      }
+
+      const freeCodePrompt = `🎁 *FREE REGISTRATION PASSCODE UNLOCKED!*\n\n` +
+        `Instagram follow aur YouTube subscribe karne ke baad aapka **Free Access Passcode** generate ho gaya hai:\n\n` +
+        `👉 \`TALIYO2026\`\n\n` +
+        `Niche chat me yeh passcode enter karein (\`TALIYO2026\`) aur apna **+100 VIP AI Credits** welcome bonus activate karein!`;
+      return await sendSafeTelegramMessage(chatId, freeCodePrompt);
+    } else if (data.startsWith('src_')) {
+      const sourceMap: Record<string, string> = {
+        src_youtube: 'YouTube (@VirajVerse016)',
+        src_instagram: 'Instagram (@fearless.devx)',
+        src_referral: 'Friend / Colleague Referral',
+        src_linkedin: 'LinkedIn / Agency',
+        src_other: 'Google / Web / Other'
+      };
+      const chosen = sourceMap[data] || 'Other';
+      await botInstance.answerCallbackQuery(query.id, { text: `Source: ${chosen}` }).catch(() => { });
+
+      const ob = onboardingTracker.get(chatId) || { step: 'ASK_CODE' };
+      ob.source = chosen;
+      ob.step = 'ASK_CODE';
+      onboardingTracker.set(chatId, ob);
+
+      const codePrompt = `✅ *DISCOVERY SOURCE RECORDED:* _${chosen}_\n\n` +
+        `🔑 *FINAL STEP 5 OF 5 // REGISTRATION PASSCODE*\n\n` +
+        `Aapka official Access Code / Invitation Passcode enter karein:\n\n` +
+        `👉 *Type your passcode in chat* (e.g. \`YOUR_PASSCODE\`):\n\n` +
+        `_(Agar aapke paas code nahi hai toh niche diye gaye buttons se Free Code lein ya Owner se contact karein)_`;
+
+      return await sendSafeTelegramMessage(chatId, codePrompt, { reply_markup: STEP5_CODE_KEYBOARD });
+    }
+
     // 👑 ADMIN INLINE ACTION HANDLERS
     if (data === 'adm_panel') {
       await botInstance.answerCallbackQuery(query.id, { text: '👑 Admin Suite...' }).catch(() => { });
@@ -1511,7 +1691,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       await botInstance.answerCallbackQuery(query.id, { text: '📊 Telemetry...' }).catch(() => { });
       const statusText = `📊 *TALIYO AGENT TELEMETRY*\n\n` +
         `• *System Health:* 🟢 100% Operational\n` +
-        `• *AI Routing Engine:* 27-Model NVIDIA NIM Cluster\n` +
+        `• *AI Routing Engine:* 27-Model Cluster\n` +
         `• *Database Engine:* Turso Cloud SQLite (AWS Mumbai)\n` +
         `• *Cloud Platform:* Vercel Serverless Production`;
       return await sendSafeTelegramMessage(chatId, statusText, { reply_markup: ADMIN_INLINE_HUB });
@@ -1519,7 +1699,37 @@ export async function handleTelegramWebhookUpdate(update: any) {
     return;
   }
 
-  // 2. Handle Photo Messages (Screenshot Verification Proof Upload)
+  if (update.message && update.message.contact) {
+    const msg: TelegramBot.Message = update.message;
+    const chatId = msg.chat.id.toString();
+    const contact = msg.contact;
+    if (!contact) return;
+    const obState = onboardingTracker.get(chatId);
+
+    if (obState) {
+      // Cryptographically verify that the contact shared belongs to THIS Telegram account
+      const isOwner = contact.user_id === msg.from?.id;
+      if (!isOwner) {
+        const spoofErr = `❌ *PHONE VERIFICATION FAILED!*\n\n` +
+          `Aapne kisi aur ka phone number share kiya hai. Security protection ke liye please apna **khud ka verified Telegram account number** share karein.`;
+        return await sendSafeTelegramMessage(chatId, spoofErr, { reply_markup: PHONE_VERIFY_KEYBOARD });
+      }
+
+      obState.phone = contact.phone_number;
+      obState.is_phone_verified = 1;
+      obState.step = 'ASK_SOURCE';
+      onboardingTracker.set(chatId, obState);
+
+      const sourcePrompt = `✅ *TELEGRAM PHONE NUMBER VERIFIED:* \`${contact.phone_number}\`\n\n` +
+        `🌐 *STEP 4 OF 5 // LEAD ATTRIBUTION*\n\n` +
+        `Aapko Taliyo DesignOS ke baare me kahan se pata chala?\n\n` +
+        `Niche diye gaye options me se select karein:`;
+
+      return await sendSafeTelegramMessage(chatId, sourcePrompt, { reply_markup: DISCOVERY_SOURCE_INLINE });
+    }
+  }
+
+  // 3. Handle Photo Messages (Screenshot Verification Proof Upload)
   if (update.message && update.message.photo) {
     const msg: TelegramBot.Message = update.message;
     const chatId = msg.chat.id.toString();
@@ -1529,7 +1739,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
     const obState = onboardingTracker.get(chatId);
     const applicantName = obState?.name || msg.from?.first_name || 'New Designer';
-    const applicantHandle = obState?.handle || (msg.from?.username ? `@${msg.from.username}` : 'n/a');
+    const applicantHandle = obState?.instagram_handle || (msg.from?.username ? `@${msg.from.username}` : 'n/a');
 
     // Save pending record in Turso DB
     db.prepare(`
@@ -1550,7 +1760,6 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const adminCaption = `🔔 *NEW DESIGNER REGISTRATION REQUEST*\n\n` +
         `• *Applicant:* ${applicantName}\n` +
         `• *Instagram:* [@${applicantHandle}](https://instagram.com/${applicantHandle})\n` +
-        `• *YouTube Channel:* ${obState?.youtubeName || 'n/a'}\n` +
         `• *Telegram User:* @${msg.from?.username || 'n/a'}\n` +
         `• *Chat ID:* \`${chatId}\`\n\n` +
         `👇 *1-Tap Approve or Reject:*`;
@@ -1577,7 +1786,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
     return;
   }
 
-  // 3. Handle Text Messages
+  // 4. Handle Text Messages
   if (update.message && update.message.text) {
     const msg: TelegramBot.Message = update.message;
     const text = msg.text ? msg.text.trim() : '';
@@ -1603,104 +1812,135 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, warningMsg);
     }
 
-    // Check Onboarding State Machine (Step 1: Capturing Name, Instagram & YouTube)
+    // Interactive 5-Step Onboarding State Machine
     const obState = onboardingTracker.get(chatId.toString());
-    if (obState && obState.step === 'WAITING_DETAILS' && !text.startsWith('/')) {
-      const parts = text.split(/\||,|\n/).map(s => s.trim());
-      const name = parts[0] || text;
-      const instaMatch = text.match(/@([a-zA-Z0-9._]+)/);
-      const targetHandle = instaMatch ? instaMatch[1] : (parts[1] ? parts[1].replace('@', '') : 'n/a');
-      const ytChannel = parts[2] || (parts.length > 1 ? parts[parts.length - 1] : 'YouTube User');
+    if (obState && !text.startsWith('/')) {
+      if (obState.step === 'ASK_NAME') {
+        obState.name = text.trim();
+        obState.step = 'ASK_EMAIL';
+        onboardingTracker.set(chatId.toString(), obState);
 
-      onboardingTracker.delete(chatId.toString());
-
-      // Run live Instagram Scraper in real-time
-      const instaProfile = await scrapeInstagramProfile(targetHandle);
-      let profileBadge = '';
-      if (instaProfile) {
-        profileBadge = `\n🔍 *Instagram:* [@${instaProfile.username}](https://instagram.com/${instaProfile.username}) (Verified Account)\n`;
+        const emailPrompt = `📝 *Name Recorded:* **${obState.name}**\n\n` +
+          `📧 *STEP 2 OF 5 // GENUINE EMAIL ADDRESS*\n\n` +
+          `Aapka authentic work ya personal email address enter karein (e.g. \`yourname@gmail.com\`):\n\n` +
+          `_(⚠️ Note: Disposable / temporary fake domains strictly blacklist hain)_`;
+        return await sendSafeTelegramMessage(chatId, emailPrompt);
       }
 
-      // Check if Instagram profile was successfully verified by our live Scraper
-      const isAutoVerified = Boolean(instaProfile && instaProfile.username && targetHandle !== 'n/a');
-
-      if (isAutoVerified) {
-        // 1. AUTO-APPROVE IMMEDIATELY (Instant 0-Second Verification)
-        db.prepare(`
-          INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, instagram_handle)
-          VALUES (?, ?, ?, ?, 1, 'DESIGNER', 'APPROVED', ?)
-          ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED', name=?, instagram_handle=?
-        `).run(`user_${chatId}`, name, msg.from?.username || '', chatId.toString(), targetHandle, name, targetHandle);
-
-        const groupSetting = db.prepare("SELECT * FROM system_settings WHERE key = 'community_group'").get();
-        let groupAction = '';
-        if (groupSetting && groupSetting.value && groupSetting.is_enabled === 1) {
-          groupAction = `\n\n👥 *Join Official Designer Ground:* [Tap Here to Join Ground](${groupSetting.value})\n`;
+      if (obState.step === 'ASK_EMAIL') {
+        const emailCheck = isValidEmail(text);
+        if (!emailCheck.valid) {
+          const errPrompt = `❌ *INVALID EMAIL ADDRESS*\n\n` +
+            `_${emailCheck.reason}_\n\n` +
+            `👉 Please apna authentic email address enter karein:`;
+          return await sendSafeTelegramMessage(chatId, errPrompt);
         }
 
-        const instantApprovedMsg = `🎉 *CONGRATULATIONS! YOUR ACCOUNT IS VERIFIED & ACTIVATED!*${profileBadge}\n` +
-          `✅ *Verified Channels:*\n` +
-          `• Instagram: [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
-          `• YouTube: *${ytChannel}*${groupAction}\n\n` +
-          `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active ho chuka hai!*\n` +
-          `Niche diye gaye buttons se shuru karein ya direct koi prompt bhejein:`;
+        obState.email = text.trim().toLowerCase();
+        obState.step = 'ASK_PHONE';
+        onboardingTracker.set(chatId.toString(), obState);
 
-        await sendSafeTelegramMessage(chatId, instantApprovedMsg, { reply_markup: DESIGNER_KEYBOARD });
+        const phonePrompt = `📧 *Email Verified:* \`${obState.email}\`\n\n` +
+          `📱 *STEP 3 OF 5 // VERIFY TELEGRAM PHONE NUMBER*\n\n` +
+          `Security aur authenticity ke liye, niche diye gaye button par tap karke apna Telegram phone number share karein:\n\n` +
+          `👇 *Tap the button below:*`;
+        return await sendSafeTelegramMessage(chatId, phonePrompt, { reply_markup: PHONE_VERIFY_KEYBOARD });
+      }
 
-        // Inform Master Admin about automated AI approval
-        const currentAdminId = getAdminChatId();
-        if (currentAdminId && botInstance) {
-          const adminNotice = `⚡ *[AI AUTO-APPROVED]* New Designer Verified!\n\n` +
-            `• *Name:* ${name}\n` +
-            `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
-            `• *YouTube Channel:* ${ytChannel}\n` +
-            `• *Chat ID:* \`${chatId}\`\n\n` +
-            `🟢 *Status:* Automatically approved & activated in 0ms!`;
-          await sendSafeTelegramMessage(currentAdminId, adminNotice);
+      if (obState.step === 'ASK_PHONE') {
+        const reminderMsg = `📱 *PHONE VERIFICATION REQUIRED*\n\n` +
+          `Please niche diye gaye **"📱 Share Verified Telegram Number"** button par tap karein taaki aapka number cryptographically verify ho sake.\n\n` +
+          `_(Manual text entry is disabled for security verification)_`;
+        return await sendSafeTelegramMessage(chatId, reminderMsg, { reply_markup: PHONE_VERIFY_KEYBOARD });
+      }
+
+      if (obState.step === 'ASK_CODE') {
+        const inputCode = text.trim();
+        const tracker = bruteForceTracker.get(chatId.toString()) || { attempts: 0, lockedUntil: 0 };
+        const now = Date.now();
+
+        if (tracker.lockedUntil > now) {
+          const remainingMinutes = Math.ceil((tracker.lockedUntil - now) / 60000);
+          const lockMsg = `🔒 *SECURITY LOCKOUT ACTIVE*\n\n` +
+            `Too many incorrect passcode attempts!\n` +
+            `Your chat is temporarily locked for *${remainingMinutes} more minute(s)*.\n\n` +
+            `📩 Contact *${getAdminHandle()}* on Telegram for authorized passcode access.`;
+          return await sendSafeTelegramMessage(chatId, lockMsg);
         }
-        return;
+
+        if (isValidInvitePasscode(inputCode)) {
+          bruteForceTracker.delete(chatId.toString());
+          onboardingTracker.delete(chatId.toString());
+
+          // Persist Full Verified Designer in Turso Cloud Database
+          db.prepare(`
+            INSERT INTO users (id, name, username, telegram_chat_id, email, phone_number, is_phone_verified, discovery_source, registration_code, is_approved, role, verification_status, referral_credits)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'DESIGNER', 'APPROVED', 100)
+            ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED', name=?, email=?, phone_number=?, is_phone_verified=?, discovery_source=?, registration_code=?
+          `).run(
+            `user_${chatId}`,
+            obState.name || msg.from?.first_name || 'Verified Designer',
+            msg.from?.username || '',
+            chatId.toString(),
+            obState.email || '',
+            obState.phone || '',
+            obState.is_phone_verified || 1,
+            obState.source || 'Direct',
+            inputCode,
+            obState.name || msg.from?.first_name || 'Verified Designer',
+            obState.email || '',
+            obState.phone || '',
+            obState.is_phone_verified || 1,
+            obState.source || 'Direct',
+            inputCode
+          );
+
+          const successMsg = `🎉 *CONGRATULATIONS! REGISTRATION VERIFIED & ACTIVATED!*\n\n` +
+            `• *Name:* **${obState.name}**\n` +
+            `• *Email:* \`${obState.email}\`\n` +
+            `• *Phone:* \`${obState.phone}\` (✅ Cryptographically Verified)\n` +
+            `• *Discovery Source:* _${obState.source || 'Direct'}_\n` +
+            `• *Bonus Credits:* \`+100 VIP AI Credits Granted\`\n\n` +
+            `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active ho gaya hai!*\n` +
+            `Niche diye gaye buttons se shuru karein ya direct prompt bhejein:`;
+
+          await sendSafeTelegramMessage(chatId, successMsg, { reply_markup: DESIGNER_KEYBOARD });
+
+          // Inform Master Admin
+          const currentAdminId = getAdminChatId();
+          if (currentAdminId && botInstance) {
+            const adminNotice = `⚡ *[NEW VERIFIED DESIGNER REGISTRATION]*\n\n` +
+              `• *Name:* ${obState.name}\n` +
+              `• *Email:* \`${obState.email}\`\n` +
+              `• *Phone:* \`${obState.phone}\` (Verified ✅)\n` +
+              `• *Source:* ${obState.source || 'Direct'}\n` +
+              `• *Code Used:* \`${inputCode}\`\n` +
+              `• *Telegram User:* @${msg.from?.username || 'n/a'}\n` +
+              `• *Chat ID:* \`${chatId}\`\n\n` +
+              `🟢 *Status:* 100% Fully Verified & Active in Turso DB!`;
+            await sendSafeTelegramMessage(currentAdminId, adminNotice);
+          }
+          return;
+        } else {
+          tracker.attempts = (tracker.attempts || 0) + 1;
+          if (tracker.attempts >= 3) {
+            tracker.lockedUntil = now + (10 * 60 * 1000);
+            bruteForceTracker.set(chatId.toString(), tracker);
+            const maxLockMsg = `🚫 *TOO MANY FAILED ATTEMPTS!*\n\n` +
+              `You have entered an incorrect passcode 3 times.\n` +
+              `Your chat has been *LOCKED for 10 minutes* for security protection.\n\n` +
+              `👉 Free Code unlock karne ke liye ya Owner se contact karne ke liye niche buttons use karein:`;
+            return await sendSafeTelegramMessage(chatId, maxLockMsg, { reply_markup: STEP5_CODE_KEYBOARD });
+          } else {
+            bruteForceTracker.set(chatId.toString(), tracker);
+            const remaining = 3 - tracker.attempts;
+            const failMsg = `❌ *INVALID PASSCODE!*\n\n` +
+              `Remaining attempts before 10-minute lockout: *${remaining}/3*.\n\n` +
+              `Free Code unlock karne ke liye ya Owner se contact karne ke liye niche buttons use karein:`;
+            return await sendSafeTelegramMessage(chatId, failMsg, { reply_markup: STEP5_CODE_KEYBOARD });
+          }
+        }
       }
-
-      // 2. FALLBACK TO MANUAL ADMIN REVIEW IF NOT INSTANTLY VERIFIED
-      db.prepare(`
-        INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status, instagram_handle)
-        VALUES (?, ?, ?, ?, 0, 'DESIGNER', 'PENDING', ?)
-        ON CONFLICT(id) DO UPDATE SET verification_status='PENDING', name=?, instagram_handle=?
-      `).run(`user_${chatId}`, name, msg.from?.username || '', chatId.toString(), targetHandle, name, targetHandle);
-
-      const submittedMsg = `⏳ *APPLICATION SUBMITTED FOR REVIEW*\n\n` +
-        `✅ *Your Details:*\n` +
-        `• Name: *${name}*\n` +
-        `• Instagram: *${targetHandle}*\n` +
-        `• YouTube Channel: *${ytChannel}*\n\n` +
-        `Hamare Admin *${getAdminHandle()}* ise review karke turant approve karenge!`;
-      await sendSafeTelegramMessage(chatId, submittedMsg);
-
-      // Instantly Alert Master Admin with 1-Click Approval Buttons
-      const adminToAlert = getAdminChatId();
-      if (adminToAlert && botInstance) {
-        const adminAlertMsg = `🔔 *MANUAL REVIEW REQUIRED: DESIGNER REGISTRATION*\n\n` +
-          `• *Applicant:* ${name}\n` +
-          `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
-          `• *YouTube Channel:* ${ytChannel}\n` +
-          `• *Telegram User:* @${msg.from?.username || 'n/a'}\n` +
-          `• *Chat ID:* \`${chatId}\`\n\n` +
-          `👇 *1-Tap Approve or Reject:*`;
-
-        const adminVerifyButtons = {
-          inline_keyboard: [
-            [
-              { text: `✅ Approve Designer`, callback_data: `admin_appr_${chatId}` },
-              { text: `❌ Reject`, callback_data: `admin_rej_${chatId}` }
-            ]
-          ]
-        };
-
-        await sendSafeTelegramMessage(adminToAlert, adminAlertMsg, {
-          reply_markup: adminVerifyButtons
-        });
-      }
-      return;
     }
 
     // Check Authentication
@@ -1824,8 +2064,8 @@ export async function handleTelegramWebhookUpdate(update: any) {
             const referrer: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(referrerId);
             if (referrer) {
               // Save referrer association in onboarding tracker
-              const ob = onboardingTracker.get(strChatId) || { step: 'WAITING_DETAILS' };
-              (ob as any).referredBy = referrerId;
+              const ob: OnboardingSession = onboardingTracker.get(strChatId) || { step: 'ASK_NAME' };
+              ob.referredBy = referrerId;
               onboardingTracker.set(strChatId, ob);
 
               // Record referral and give credits

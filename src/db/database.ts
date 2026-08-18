@@ -515,7 +515,12 @@ export async function initDatabase() {
       "ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0;",
       "ALTER TABLE users ADD COLUMN referral_credits INTEGER DEFAULT 0;",
       "ALTER TABLE users ADD COLUMN referral_tier TEXT DEFAULT 'BRONZE';",
-      "ALTER TABLE users ADD COLUMN affiliate_campaign TEXT;"
+      "ALTER TABLE users ADD COLUMN affiliate_campaign TEXT;",
+      "ALTER TABLE users ADD COLUMN email TEXT;",
+      "ALTER TABLE users ADD COLUMN phone_number TEXT;",
+      "ALTER TABLE users ADD COLUMN is_phone_verified INTEGER DEFAULT 0;",
+      "ALTER TABLE users ADD COLUMN discovery_source TEXT;",
+      "ALTER TABLE users ADD COLUMN registration_code TEXT;"
     ];
 
     for (const sql of migrations) {
