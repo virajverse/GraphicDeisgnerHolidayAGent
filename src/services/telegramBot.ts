@@ -326,10 +326,33 @@ export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN): Telegra
     return null;
   }
 
+  if (botInstance) return botInstance;
+
   try {
-    const isWebhookMode = Boolean(process.env.VERCEL || process.env.NODE_ENV === 'production');
+    const isWebhookMode = Boolean(process.env.VERCEL || (process.env.NODE_ENV === 'production' && !process.env.LOCAL_POLLING));
     botInstance = new TelegramBot(token, { polling: !isWebhookMode });
     console.log(`[TelegramBot] 🤖 Autonomous AI Agent Active (Mode: ${isWebhookMode ? 'Serverless Webhook' : 'Local Polling'})!`);
+
+    if (!isWebhookMode) {
+      botInstance.on('message', (msg) => {
+        handleTelegramWebhookUpdate({ message: msg }).catch(err => {
+          console.error(`[TelegramBot Message Handler Error]: ${err.message}`);
+        });
+      });
+
+      botInstance.on('callback_query', (query) => {
+        handleTelegramWebhookUpdate({ callback_query: query }).catch(err => {
+          console.error(`[TelegramBot Callback Handler Error]: ${err.message}`);
+        });
+      });
+
+      botInstance.on('polling_error', (err: any) => {
+        if (!err.message?.includes('409 Conflict')) {
+          console.warn(`[TelegramBot Polling Notice]: ${err.message}`);
+        }
+      });
+    }
+
     return botInstance;
   } catch (err: any) {
     console.error(`[TelegramBot] Failed to initialize Gateway: ${err.message}`);
