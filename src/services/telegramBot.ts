@@ -242,10 +242,26 @@ function verifyUserAuth(msg: TelegramBot.Message): { authorized: boolean; user: 
 
 export async function sendSafeTelegramMessage(chatId: string | number, text: string, options: any = {}) {
   if (!botInstance) return null;
+
+  if (text.length > 3900) {
+    const halfIndex = text.lastIndexOf('\n\n', 3800);
+    const splitAt = halfIndex > 1000 ? halfIndex : 3800;
+    const part1 = text.slice(0, splitAt).trim();
+    const part2 = text.slice(splitAt).trim();
+
+    await sendSafeSingleMessage(chatId, part1);
+    return await sendSafeSingleMessage(chatId, part2, options);
+  }
+
+  return await sendSafeSingleMessage(chatId, text, options);
+}
+
+async function sendSafeSingleMessage(chatId: string | number, text: string, options: any = {}) {
+  if (!botInstance) return null;
   try {
     return await botInstance.sendMessage(chatId, text, { parse_mode: 'Markdown', ...options });
   } catch (err: any) {
-    if (err.message && err.message.includes("can't parse entities")) {
+    if (err.message && (err.message.includes("can't parse entities") || err.message.includes("Bad Request"))) {
       const plainText = text.replace(/[*_`[\]()]/g, '');
       try {
         return await botInstance.sendMessage(chatId, plainText, { ...options, parse_mode: undefined });
@@ -298,6 +314,66 @@ export function formatTelegramAlertMessage(
 
   ideas.forEach((idea, idx) => {
     const num = idx + 1;
+    const cat = idea.category || 'Concept';
+    msg += `*#0${num} [${cat.toUpperCase()}]* ➔ *${idea.title}*\n`;
+    msg += `• *Concept:* ${idea.concept}\n`;
+    msg += `• *Visual Direction:* ${idea.visual_direction}\n`;
+    msg += `• *Headline:* _"${idea.headline}"_\n`;
+    msg += `• *Best Format:* ${idea.platform}\n\n`;
+  });
+
+  msg += `⭐ *TOP STRATEGIC RECOMMENDATION:*\n`;
+  const recNums = recommendation.recommended_ids ? recommendation.recommended_ids.map(i => `#0${i}`).join(' & ') : '#01 & #04';
+  msg += `${recNums} — ${recommendation.avoid_note || 'Strongest engagement potential.'}\n\n`;
+
+  if (ideation.conversational_outro) {
+    msg += `💡 _"${ideation.conversational_outro}"_\n\n`;
+  }
+
+  msg += `📱 *Target Platforms:* ${recommendation.recommended_platforms || 'Instagram Carousel + LinkedIn'}\n`;
+  msg += `🎯 *Target Audience:* ${recommendation.target_audience || 'General / Modern Digital Audience'}\n`;
+
+  return msg;
+}
+
+export function formatTelegramAlertPart1(
+  event: EventRecord,
+  context: EventContext,
+  ideation: IdeationResult
+): string {
+  const { ideas } = ideation;
+  let msg = `✨ *CREATIVE RADAR BRIEFING* [Part 1/2]\n\n`;
+  if (ideation.conversational_intro) {
+    msg += `💬 _"${ideation.conversational_intro}"_\n\n`;
+  }
+  msg += `📅 *Occasion:* ${event.name} (${event.date})\n\n`;
+  msg += `🌐 *WHAT'S HAPPENING IN THE REAL WORLD:*\n_${context.summary}_\n\n`;
+  msg += `💡 *Creative Angle for Designers:*\n${context.opportunityHint}\n\n`;
+
+  msg += `🎨 *READY-TO-DESIGN CONCEPTS (#01 - #03):*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  const firstThree = ideas.slice(0, 3);
+  firstThree.forEach((idea, idx) => {
+    const num = idx + 1;
+    const cat = idea.category || 'Concept';
+    msg += `*#0${num} [${cat.toUpperCase()}]* ➔ *${idea.title}*\n`;
+    msg += `• *Concept:* ${idea.concept}\n`;
+    msg += `• *Visual Direction:* ${idea.visual_direction}\n`;
+    msg += `• *Headline:* _"${idea.headline}"_\n`;
+    msg += `• *Best Format:* ${idea.platform}\n\n`;
+  });
+
+  return msg;
+}
+
+export function formatTelegramAlertPart2(
+  event: EventRecord,
+  ideation: IdeationResult
+): string {
+  const { ideas, recommendation } = ideation;
+  let msg = `🎨 *READY-TO-DESIGN CONCEPTS (#04 - #06):* [Part 2/2]\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  const nextThree = ideas.slice(3);
+  nextThree.forEach((idea, idx) => {
+    const num = idx + 4;
     const cat = idea.category || 'Concept';
     msg += `*#0${num} [${cat.toUpperCase()}]* ➔ *${idea.title}*\n`;
     msg += `• *Concept:* ${idea.concept}\n`;
@@ -833,12 +909,42 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
       ]
     };
 
-    await botInstance.editMessageText(formattedMessage, {
-      chat_id: chatId,
-      message_id: progressMsg.message_id,
-      parse_mode: 'Markdown',
-      reply_markup: inlineKeyboard
-    });
+    if (formattedMessage.length <= 3800) {
+      try {
+        await botInstance.editMessageText(formattedMessage, {
+          chat_id: chatId,
+          message_id: progressMsg.message_id,
+          parse_mode: 'Markdown',
+          reply_markup: inlineKeyboard
+        });
+      } catch (err: any) {
+        const plainText = formattedMessage.replace(/[*_`[\]()]/g, '');
+        await botInstance.editMessageText(plainText, {
+          chat_id: chatId,
+          message_id: progressMsg.message_id,
+          reply_markup: inlineKeyboard
+        }).catch(() => {});
+      }
+    } else {
+      // Split into 2 clean messages to never hit Telegram's 4096 character limit
+      const part1 = formatTelegramAlertPart1(event, context, ideation);
+      const part2 = formatTelegramAlertPart2(event, ideation);
+
+      try {
+        await botInstance.editMessageText(part1, {
+          chat_id: chatId,
+          message_id: progressMsg.message_id,
+          parse_mode: 'Markdown'
+        });
+      } catch {
+        await botInstance.editMessageText(part1.replace(/[*_`[\]()]/g, ''), {
+          chat_id: chatId,
+          message_id: progressMsg.message_id
+        }).catch(() => {});
+      }
+
+      await sendSafeTelegramMessage(chatId, part2, { reply_markup: inlineKeyboard });
+    }
 
   } catch (err: any) {
     console.error(`[Agent Processing Error]: ${err.message}`);

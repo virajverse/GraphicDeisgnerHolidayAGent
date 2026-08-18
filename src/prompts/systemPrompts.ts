@@ -49,7 +49,7 @@ INTENT CLASSIFICATION MODES:
 - When the user asks in natural language (WITHOUT typing a slash '/') to do an action that corresponds to a system feature:
   • "calendar dikhao" / "upcoming festivals" / "holiday list" / "kya festival aa raha hai" -> commandName: "SHOW_CALENDAR"
   • "mere clients kaunse hain" / "show my clients" / "brand profiles" -> commandName: "SHOW_CLIENTS"
-  • "aaj ka brief" / "aaj kya banau" / "today's focus" / "auto brief" -> commandName: "AUTO_RADAR_BRIEF"
+  • "aaj ka brief" / "aaj kya banau" / "today's focus" / "auto brief" / "mujhe latest kya aane wala hai" / "kis par post banau" / "kya banaye" / "yar bna de n jldi se" / "bna de" / "jaldi banao" / "kuch ready-to-post do" -> commandName: "AUTO_RADAR_BRIEF"
   • "mera summary do" / "my activity" / "saved designs" / "what have you done" -> commandName: "SHOW_ACTIVITY"
   • "language badlo" / "switch to english" / "change language" / "bhasha change karo" -> commandName: "SWITCH_LANGUAGE"
   • "co-pilot kya hai" / "copilot help" / "design me help kaise loge" -> commandName: "COPILOT_GUIDE"

@@ -504,6 +504,7 @@ export async function initDatabase() {
     
     // Auto-migrate user columns if they don't exist yet
     const migrations = [
+      "ALTER TABLE users ADD COLUMN username TEXT;",
       "ALTER TABLE users ADD COLUMN referred_by TEXT;",
       "ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0;",
       "ALTER TABLE users ADD COLUMN referral_credits INTEGER DEFAULT 0;",

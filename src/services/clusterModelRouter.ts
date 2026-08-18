@@ -76,11 +76,11 @@ export const MODEL_CLUSTERS = {
     'nvidia/llama-3.3-nemotron-super-49b-v1'
   ],
   DEEP_STRATEGY: [
-    'nvidia/nemotron-3.5-lightning-30b-a3b',     // 🧠 #1 Benchmark Winner (4.6s, 100% Success, 62.5/100)
-    'meta/llama-3.1-8b-instruct',               // ⚡ #2 Fast Fallback (2.4s, 100% Success)
-    'nvidia/nemotron-3-nano-30b-a3b',           // 🧠 #3 High Stability Reasoning (100% Success)
-    'openai/gpt-oss-120b',                      // 👑 #4 Heavy 6-Angle Campaign Reasoning
-    'stepfun-ai/step-3.7-flash',
+    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Ultra-Fast & 100% Success (2.4s)
+    'nvidia/nemotron-3-nano-30b-a3b',           // 🧠 #2 High Stability Reasoning (4.1s)
+    'openai/gpt-oss-120b',                      // 👑 #3 Heavy 6-Angle Campaign Reasoning
+    'stepfun-ai/step-3.7-flash',                // ⚡ #4 Fast Flash Inference
+    'nvidia/nemotron-3.5-lightning-30b-a3b',    // 🧠 #5 Fallback
     'nvidia/nemotron-3-ultra-550b-a55b'
   ],
   TRANSLATION_CALIBRATION: [
@@ -147,8 +147,8 @@ export async function executeClusterQuery(
         requestPayload.response_format = options.response_format;
       }
 
-      // Execute completion with 20s default timeout support
-      const requestOptions = { timeout: options.timeout ?? 20000 };
+      // Execute completion with 15s default timeout support
+      const requestOptions = { timeout: options.timeout ?? 15000 };
       const response = await client.chat.completions.create(requestPayload, requestOptions);
 
       const text = response.choices[0]?.message?.content?.trim();
