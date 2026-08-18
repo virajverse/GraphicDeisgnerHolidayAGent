@@ -1,63 +1,117 @@
-# Environment & Secrets (NEVER COMMIT SENSITIVE KEYS)
+# ======================================================
+# 🔒 TALIYO GRAPHIC DESIGNER AGENT — .gitignore
+# ======================================================
+
+# 1. Environment & Sensitive Credentials (NEVER COMMIT SECRETS)
 .env
 .env.local
 .env.production
 .env.development
+.env*.local
+!.env.example
 
-# Node Dependencies
+# 2. Node.js & Package Managers
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.pnpm-debug.log*
 
-# Local SQLite Database Files (Production uses Turso Cloud DB)
+# 3. Build Outputs & Serverless Artifacts
+dist/
+build/
+out/
+.vercel/
+.turbo/
+.next/
+
+# 4. Local SQLite & Temporary Database Files (Turso Cloud is used in production)
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
-taliyo.db
-taliyo.db-shm
-taliyo.db-wal
+*.sqlite
+*.sqlite3
+taliyo.db*
 
-# Vercel Deployment & Build Artifacts
-.vercel
-dist/
-build/
-
-# Logs & Diagnostics
-*.log
-logs/
-.system_generated/
-
-# OS Specific Files
+# 5. OS & IDE System Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
-
-# Python Cache & Virtual Environments
-__pycache__/
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# 6. Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 .venv/
 env/
 venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Goku Workspace & Raw Media (Strictly Ignored)
+# 7. Goku Video Workspace, Raw Media & Large Archives (Strictly Ignored)
 goku edit/
 *goku*
 public/goku*
 public/frames_goku*
 *.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
 *.zip
+*.tar*
+*.rar
+*.7z
 
-# Test Scripts, Benchmark Matrix & Audit Reports
+# 8. Temporary Benchmark Scripts, Diagnostic Dumps & Raw Text Reports
 test/
 h.txt
-audit_live_system_report.txt
-benchmark_27_models_matrix.json
-benchmark_27_models_report.txt
+*.txt
+*.log
+logs/
+.system_generated/
+.tempmediaStorage/
+.user_uploaded/
+
+# Scratch Benchmarks & Audit JSON/Python Dumps
+benchmark_*.json
+*_matrix.json
+*_report.json
+nvidia_models_*.json
+nvidia_models_*.txt
 benchmark_llm_speed.py
 check_all_102_nvidia_models.py
-nvidia_models_audit_report.json
-nvidia_models_strengths.txt
+scripts/benchmark_27_models.py
+scripts/deep_system_live_audit.ts
