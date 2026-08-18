@@ -976,8 +976,8 @@ export async function handleRenderImageCommand(
 
   const waitMsg = `🎨 *[3D VISUAL ASSET STUDIO]*\n\n` +
     `🎯 *Subject:* **"${topic}"**\n` +
-    `⚡ _Rendering 1024x1024 ultra-crisp 3D visual asset via NVIDIA FLUX.2 Klein 4B..._\n\n` +
-    `⏳ _Estimated time: 3-5 seconds..._`;
+    `⚡ _Rendering 1024x1024 ultra-crisp 3D visual asset via Neural FLUX.2 Studio Engine..._\n\n` +
+    `⏳ _Estimated rendering time: 2-3 seconds..._`;
 
   await sendSafeTelegramMessage(chatId, waitMsg);
 
@@ -1412,17 +1412,17 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, clientText);
     } else if (data === 'menu_activity') {
       await botInstance.answerCallbackQuery(query.id, { text: '👤 Loading Summary...' }).catch(() => { });
-      const activityText = `👤 *YOUR CREATIVE AGENT ACTIVITY*\n\n` +
-        `• *Role:* Senior Graphic Designer\n` +
-        `• *Saved Briefings:* Active & Synchronized\n` +
-        `• *NVIDIA Cluster:* 27 Models Online\n\n` +
-        `💬 *Tap any upcoming event or send a prompt to generate 6 ideas!*`;
+      const activityText = `👤 *YOUR CREATIVE STUDIO ACTIVITY*\n\n` +
+        `• *Role:* Senior Graphic Designer & Art Director\n` +
+        `• *Saved Briefings:* Bookmarked & Synchronized\n` +
+        `• *AI Neural Cluster:* 27 Models Online & Active\n\n` +
+        `💬 *Tap any upcoming occasion or send a creative prompt to generate 6 concepts!*`;
       return await sendSafeTelegramMessage(chatId, activityText);
     } else if (data === 'menu_status') {
       await botInstance.answerCallbackQuery(query.id, { text: '📊 Loading Telemetry...' }).catch(() => { });
       const statusText = `📊 *TALIYO AGENT TELEMETRY*\n\n` +
         `• *System Health:* 🟢 100% Operational\n` +
-        `• *AI Routing Engine:* 27-Model NVIDIA NIM Cluster\n` +
+        `• *AI Routing Engine:* 27-Model Resilient Cascade Cluster\n` +
         `• *Database Engine:* Turso Cloud SQLite (AWS Mumbai)\n` +
         `• *Cloud Platform:* Vercel Serverless Production`;
       return await sendSafeTelegramMessage(chatId, statusText);
