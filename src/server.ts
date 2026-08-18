@@ -42,7 +42,7 @@ app.get(['/api/scrape/live', '/scrape/live'], async (req: Request, res: Response
 });
 
 // Get System Dashboard Summary Stats & Health
-app.get(['/api/stats', '/stats', '/api/health', '/health', '/'], (req: Request, res: Response) => {
+app.get(['/api/stats', '/stats', '/api/health', '/health'], (req: Request, res: Response) => {
   try {
     const eventsCount = db.prepare('SELECT COUNT(*) as count FROM events').get()?.count || 20;
     const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;

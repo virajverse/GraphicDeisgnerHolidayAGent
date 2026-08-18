@@ -12,6 +12,7 @@ import db from '../db/database.js';
 import { executeClusterQuery } from './clusterModelRouter.js';
 import { executeMultiSourceScrape } from './webScraperEngine.js';
 import { generateVisualColorSwatches } from './visualMediaEngine.js';
+import { generateDesignerPosterImage } from './fluxImageEngine.js';
 import { EventRecord, ClientRecord, UserRecord } from '../types/database.js';
 
 export interface AgentThoughtStep {
@@ -24,12 +25,14 @@ export interface AgentThoughtStep {
 }
 
 export interface AgentExecutionResult {
-  actionType: 'DIRECT_REPLY' | 'SHOW_CALENDAR' | 'SHOW_CLIENTS' | 'CAMPAIGN_BRIEFING';
+  actionType: 'DIRECT_REPLY' | 'SHOW_CALENDAR' | 'SHOW_CLIENTS' | 'CAMPAIGN_BRIEFING' | 'VISUAL_RENDER';
   thoughtTrace: AgentThoughtStep[];
   deliverable: string;
   critiqueScore?: number;
   critiqueFeedback?: string;
   totalDurationMs: number;
+  imageBuffer?: Buffer;
+  imageSeed?: number;
 }
 
 /**
@@ -102,6 +105,13 @@ export const AGENT_TOOLS = {
 
     const selected = isLuxuryOrFestive ? palettes.luxury : (isTechOrD2C ? palettes.tech : palettes.vibrant);
     return generateVisualColorSwatches(selected);
+  },
+
+  /**
+   * Tool: Render Ultra-Crisp Zero-Text 3D Visual Asset via NVIDIA FLUX.2 Klein 4B
+   */
+  async tool_render_3d_asset(craftedPrompt: string) {
+    return await generateDesignerPosterImage(craftedPrompt);
   }
 };
 
@@ -130,14 +140,16 @@ Analyze this prompt and decide the single best action:
 1. "DIRECT_DESIGN_CO_PILOT": If user asks for specific color palettes, font pairings, headline rewrites, layout advice, or a quick greeting.
 2. "SHOW_CALENDAR": If user asks to see upcoming festivals, calendar, or holiday list.
 3. "SHOW_CLIENTS": If user asks to see their client profiles.
-4. "GENERATE_CAMPAIGN_BRIEF": If user asks to create, plan, or generate campaign concepts for an upcoming occasion, festival, or marketing goal.
+4. "GENERATE_VISUAL_RENDER": If user asks to render or generate an image, 3D asset, photo, poster background, or visual element (e.g. "/render", "image banao", "3D visual asset", "render do", "photo banao").
+5. "GENERATE_CAMPAIGN_BRIEF": If user asks to create, plan, or generate multi-concept marketing/festival campaign briefings.
 
 Return JSON ONLY:
 {
-  "actionType": "DIRECT_DESIGN_CO_PILOT" | "SHOW_CALENDAR" | "SHOW_CLIENTS" | "GENERATE_CAMPAIGN_BRIEF",
+  "actionType": "DIRECT_DESIGN_CO_PILOT" | "SHOW_CALENDAR" | "SHOW_CLIENTS" | "GENERATE_VISUAL_RENDER" | "GENERATE_CAMPAIGN_BRIEF",
   "targetTopic": "Extracted Festival, Occasion, or Subject Name",
   "targetIndustry": "Tech / Real Estate / Luxury / D2C / General",
   "targetMood": "Minimalist / Luxury / Bold 3D / Emotional",
+  "crafted3DPrompt": "Optimized physical 3D prompt for FLUX: focal 3D object, realistic materials, studio rim lighting, dark obsidian background, clean negative space, no text, 8k render",
   "directAnswer": "Crisp master-class design answer if actionType is DIRECT_DESIGN_CO_PILOT, otherwise empty"
 }
 `;
@@ -147,13 +159,14 @@ Return JSON ONLY:
     targetTopic: userPrompt,
     targetIndustry: 'General Design',
     targetMood: 'Modern 3D',
+    crafted3DPrompt: `${userPrompt} 3D design centerpiece, studio rim lighting, dark obsidian background, no text, 8k render`,
     directAnswer: ''
   };
 
   try {
     const res = await executeClusterQuery('FRONT_DISPATCHER', 'Return JSON only.', perceptionPrompt, { max_tokens: 500 });
     const parsed = JSON.parse(res.text.replace(/```json|```/g, '').trim());
-    if (parsed.actionType) perception = parsed;
+    if (parsed.actionType) perception = { ...perception, ...parsed };
   } catch (err: any) {
     console.warn(`[Agent Perception Fallback]: ${err.message}`);
   }
@@ -185,6 +198,39 @@ Return JSON ONLY:
       actionType: 'SHOW_CLIENTS',
       thoughtTrace,
       deliverable: clientText,
+      totalDurationMs: Date.now() - startTime
+    };
+  }
+
+  // Action: GENERATE_VISUAL_RENDER (Agent understands user intent -> crafts prompt -> invokes FLUX)
+  if (perception.actionType === 'GENERATE_VISUAL_RENDER') {
+    const renderStart = Date.now();
+    const cleanPrompt = perception.crafted3DPrompt || perception.targetTopic;
+    const renderRes = await AGENT_TOOLS.tool_render_3d_asset(cleanPrompt);
+
+    thoughtTrace.push({
+      stepNumber: stepIndex++,
+      thought: `Agent understood visual design intent. Crafted optimized FLUX 3D prompt: "${cleanPrompt}"`,
+      actionName: 'tool_render_3d_asset',
+      actionInput: { prompt: cleanPrompt },
+      observation: renderRes.success ? `Rendered 1024x1024 3D asset in ${renderRes.durationMs}ms` : `Render error: ${renderRes.errorMessage}`,
+      durationMs: Date.now() - renderStart
+    });
+
+    const caption = `🖼️ *3D DESIGN ASSET RENDER READY!*\n\n` +
+      `🎯 *Subject:* **${perception.targetTopic}**\n` +
+      `🎲 *Seed:* \`${renderRes.seed || 42}\` | ⚡ *Render Time:* \`${((renderRes.durationMs || 0) / 1000).toFixed(1)}s\`\n\n` +
+      `💡 *GRAPHIC DESIGNER PRO-TIP:*\n` +
+      `• Ye asset **100% clean & zero-text** hai with generous negative space.\n` +
+      `• Ise direct apne **Figma / Photoshop / Canva** canvas par drag karein.\n` +
+      `• Upar apna client logo, headline copy aur offer text add karein! 🎨`;
+
+    return {
+      actionType: 'VISUAL_RENDER',
+      thoughtTrace,
+      deliverable: caption,
+      imageBuffer: renderRes.imageBuffer,
+      imageSeed: renderRes.seed,
       totalDurationMs: Date.now() - startTime
     };
   }

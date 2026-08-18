@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import db, { getSecurityAuditLogs } from '../db/database.js';
+import db, { getSecurityAuditLogs, getAdminHandle, getAdminChatId, isValidInvitePasscode, getSystemSetting, setSystemSetting } from '../db/database.js';
 import { fetchRealWorldContext } from './contextEngine.js';
 import { generateCreativeIdeas } from './ideationEngine.js';
 import { executeClusterQuery, MODEL_CLUSTERS } from './clusterModelRouter.js';
@@ -15,10 +15,10 @@ import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord,
 import { EventContext, IdeationResult } from '../types/models.js';
 import { sendCelebrationAnimation, generateVisualColorSwatches, VISUAL_ASSETS } from './visualMediaEngine.js';
 import { runAutonomousDesignerAgent, runUnifiedGraphicDesignerAgent } from './autonomousDesignerAgent.js';
+import { generateDesignerPosterImage } from './fluxImageEngine.js';
 
-const ADMIN_CODE = process.env.ADMIN_INVITE_CODE || 'TALIYO2026';
-const ADMIN_HANDLE = process.env.ADMIN_TELEGRAM_HANDLE || '@virajverse';
-const MASTER_ADMIN_CHAT_ID = (process.env.TELEGRAM_DEFAULT_CHAT_ID || '1634951702').toString();
+const getMasterAdminChatId = () => getAdminChatId();
+const getAdminTelegramHandle = () => getAdminHandle();
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'GraphicDeisgnerHolidayAGent_bot';
 
 let botInstance: TelegramBot | null = null;
@@ -100,9 +100,9 @@ function checkUserCooldown(chatId: string | number): { allowed: boolean; remaini
 export const DESIGNER_KEYBOARD = {
   keyboard: [
     [{ text: '⚡ Auto Radar Brief' }, { text: '🤖 Autonomous Agent AI' }],
-    [{ text: '🗓️ Full Calendar' }, { text: '🎨 Art Director Co-Pilot' }],
-    [{ text: '💼 Client Profiles' }, { text: '🎁 Invite & Earn' }],
-    [{ text: '👤 My Activity' }, { text: '📖 Guide & Support' }]
+    [{ text: '🗓️ Full Calendar' }, { text: '🖼️ 3D Visual Render' }],
+    [{ text: '🎨 Art Director Co-Pilot' }, { text: '💼 Client Profiles' }],
+    [{ text: '🎁 Invite & Earn' }, { text: '📖 Guide & Support' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -116,15 +116,15 @@ export const DESIGNER_INLINE_HUB = {
       { text: '🤖 Autonomous Agent AI', callback_data: 'cmd_agent' }
     ],
     [
-      { text: '🗓️ 30-Day Calendar', callback_data: 'cmd_calendar' },
-      { text: '🎨 Art Director Co-Pilot', callback_data: 'cmd_copilot' }
+      { text: '🖼️ 3D Visual Render', callback_data: 'cmd_render' },
+      { text: '🗓️ 30-Day Calendar', callback_data: 'cmd_calendar' }
     ],
     [
-      { text: '💼 Client Profiles', callback_data: 'cmd_clients' },
-      { text: '🎁 Invite & Earn', callback_data: 'cmd_referral' }
+      { text: '🎨 Art Director Co-Pilot', callback_data: 'cmd_copilot' },
+      { text: '💼 Client Profiles', callback_data: 'cmd_clients' }
     ],
     [
-      { text: '👤 My Activity', callback_data: 'cmd_activity' },
+      { text: '🎁 Invite & Earn', callback_data: 'cmd_referral' },
       { text: '📖 Guide & Support', callback_data: 'cmd_guide' }
     ]
   ]
@@ -207,7 +207,7 @@ export function getUpcomingInlineKeyboard() {
 }
 
 export function isMasterAdmin(chatId: string | number): boolean {
-  return chatId.toString() === MASTER_ADMIN_CHAT_ID;
+  return chatId.toString() === getAdminChatId();
 }
 
 export function getUserKeyboard(chatId: string | number) {
@@ -219,7 +219,7 @@ function verifyUserAuth(msg: TelegramBot.Message): { authorized: boolean; user: 
   const username = msg.from ? msg.from.username : '';
 
   // Master Admin Immutable Verification
-  if (chatId === MASTER_ADMIN_CHAT_ID) {
+  if (chatId === getAdminChatId()) {
     let adminUser: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId);
     if (!adminUser) {
       db.prepare(`
@@ -285,7 +285,7 @@ export async function sendAccessGatewayCard(chatId: string | number) {
     `• 6 Ready-to-Design Concept Angles per event (Educational, 3D, Emotional)\n` +
     `• Instant Hex Color Palettes & Font Pairings for Figma/Photoshop\n\n` +
     `👇 *Access ke liye niche se ek option select karein:*`;
-  
+
   return await sendSafeTelegramMessage(chatId, gatewayMsg, {
     reply_markup: GATEWAY_INLINE_KEYBOARD
   });
@@ -502,12 +502,12 @@ export async function handleReferralHub(chatId: string | number) {
 
   const referralCount = user.referral_count || 0;
   const referralCredits = user.referral_credits || 0;
-  
+
   // Calculate tier & progression
   let tierName = '🥉 BRONZE DESIGNER';
   let nextTierText = '5 referrals (Silver Tier)';
   let tierPerks = '• 50 AI Credits per friend\n• Standard Priority Queue';
-  
+
   if (referralCount >= 30) {
     tierName = '💎 DIAMOND MASTER';
     nextTierText = 'MAX TIER REACHED!';
@@ -571,7 +571,7 @@ export async function handleReferralHub(chatId: string | number) {
  */
 export async function handleTopReferrers(chatId: string | number) {
   const topUsers: UserRecord[] = db.prepare('SELECT * FROM users ORDER BY referral_count DESC LIMIT 10').all();
-  
+
   let msg = `🏆 *TALIYO COMMUNITY REFERRAL LEADERBOARD*\n\n` +
     `Top designers who have invited the most peers to Taliyo Creative Intelligence:\n\n`;
 
@@ -833,7 +833,7 @@ export async function handleAutonomousAgentCommand(
         chat_id: chatId,
         message_id: progressMsg.message_id,
         parse_mode: 'Markdown'
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     const inlineKeyboard = {
@@ -854,6 +854,49 @@ export async function handleAutonomousAgentCommand(
   } catch (err: any) {
     console.error(`[Autonomous Agent Error]: ${err.message}`);
     await sendSafeTelegramMessage(chatId, `⚠️ *Agent Notice:* Agent workflow encountered: ${err.message}. Please try again.`);
+  }
+}
+
+/**
+ * 🖼️ 3D Visual Asset Render via NVIDIA FLUX.2 Klein 4B
+ */
+export async function handleRenderImageCommand(
+  chatId: string | number,
+  promptText: string,
+  user: UserRecord | null = null
+) {
+  if (!botInstance) return;
+  const rawQuery = promptText.replace(/^\/render/i, '').replace(/^\/image/i, '').replace(/^🖼️ 3D Visual Render/i, '').trim();
+  const topic = rawQuery || 'Traditional 3D Brass Indian Diya with Glowing Flame';
+
+  const waitMsg = `🎨 *[3D VISUAL ASSET STUDIO]*\n\n` +
+    `🎯 *Subject:* **"${topic}"**\n` +
+    `⚡ _Rendering 1024x1024 ultra-crisp 3D visual asset via NVIDIA FLUX.2 Klein 4B..._\n\n` +
+    `⏳ _Estimated time: 3-5 seconds..._`;
+
+  await sendSafeTelegramMessage(chatId, waitMsg);
+
+  try {
+    const renderRes = await generateDesignerPosterImage(topic, '3D_LUXURY');
+
+    if (renderRes.success && renderRes.imageBuffer) {
+      const caption = `🖼️ *3D DESIGN ASSET RENDER READY!*\n\n` +
+        `🎯 *Subject:* ${topic}\n` +
+        `🎲 *Seed:* \`${renderRes.seed}\` | ⚡ *Render Time:* \`${(renderRes.durationMs / 1000).toFixed(1)}s\`\n\n` +
+        `💡 *GRAPHIC DESIGNER PRO-TIP:*\n` +
+        `• Ye asset **100% clean & zero-text** hai with generous negative space.\n` +
+        `• Ise direct apne **Figma / Photoshop / Canva** canvas par drag karein.\n` +
+        `• Upar apna client logo, festive greeting aur discount offer add karein! 🎨`;
+
+      await botInstance.sendPhoto(chatId, renderRes.imageBuffer, {
+        caption,
+        parse_mode: 'Markdown'
+      });
+    } else {
+      await sendSafeTelegramMessage(chatId, `⚠️ *Render Notice:* Could not generate image: ${renderRes.errorMessage || 'Unknown error'}`);
+    }
+  } catch (err: any) {
+    await sendSafeTelegramMessage(chatId, `❌ *Render Error:* ${err.message}`);
   }
 }
 
@@ -939,7 +982,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
       chat_id: chatId,
       message_id: progressMsg.message_id,
       parse_mode: 'Markdown'
-    }).catch(() => {});
+    }).catch(() => { });
 
     const context = await fetchRealWorldContext(event);
 
@@ -948,7 +991,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
       chat_id: chatId,
       message_id: progressMsg.message_id,
       parse_mode: 'Markdown'
-    }).catch(() => {});
+    }).catch(() => { });
 
     const ideation = await generateCreativeIdeas({ event, context, userProfile, clientProfile: client });
 
@@ -987,7 +1030,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
           chat_id: chatId,
           message_id: progressMsg.message_id,
           reply_markup: inlineKeyboard
-        }).catch(() => {});
+        }).catch(() => { });
       }
     } else {
       // Split into 2 clean messages to never hit Telegram's 4096 character limit
@@ -1004,7 +1047,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
         await botInstance.editMessageText(part1.replace(/[*_`[\]()]/g, ''), {
           chat_id: chatId,
           message_id: progressMsg.message_id
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       await sendSafeTelegramMessage(chatId, part2, { reply_markup: inlineKeyboard });
@@ -1016,7 +1059,7 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
       chat_id: chatId,
       message_id: progressMsg.message_id,
       parse_mode: 'Markdown'
-    }).catch(() => {});
+    }).catch(() => { });
   } finally {
     activeProcessingUsers.delete(strChatId);
   }
@@ -1087,8 +1130,8 @@ export function handleUpcomingCommand(): string {
 
 export async function handleTodayCommand(): Promise<string> {
   const todayEvt: EventRecord = db.prepare("SELECT * FROM events WHERE date = '08-15' LIMIT 1").get() ||
-                                db.prepare('SELECT * FROM events LIMIT 1').get();
-  
+    db.prepare('SELECT * FROM events LIMIT 1').get();
+
   if (!todayEvt) return "No major event scheduled for today.";
   const res = await handleOnDemandIdeas(todayEvt.name);
   return res.formattedMessage;
@@ -1148,7 +1191,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await botInstance.answerCallbackQuery(query.id, {
         text: '⛔ ACCOUNT BANNED. Contact @virajverse to unban.',
         show_alert: true
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Cooldown check for button spammers
@@ -1157,18 +1200,18 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await botInstance.answerCallbackQuery(query.id, {
         text: `⏳ Please wait ${cooldown.remainingSec}s before tapping another button!`,
         show_alert: true
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Access Gateway Buttons
     if (data === 'gate_login') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🔑 Direct Passcode Login' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🔑 Direct Passcode Login' }).catch(() => { });
       const loginGuide = `🔑 *DIRECT PASSCODE LOGIN*\n\nAapke paas official invite passcode hai toh chat me type karein:\n\n\`/register YOUR_PASSCODE\`\n\n*(Example: \`/register TALIYO2026\`)*`;
       return await sendSafeTelegramMessage(chatId, loginGuide);
     }
 
     if (data === 'gate_register') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📝 Free Registration' }).catch(() => { });
       onboardingTracker.set(chatId.toString(), { step: 'WAITING_DETAILS' });
 
       const igPath = path.join(process.cwd(), 'public/assets/instagram_banner.png');
@@ -1182,7 +1225,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
           reply_markup: {
             inline_keyboard: [[{ text: '📸 Follow @fearless.devx', url: 'https://www.instagram.com/fearless.devx/' }]]
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       // 2. Send YouTube Photo Card with Direct Action Button
@@ -1193,7 +1236,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
           reply_markup: {
             inline_keyboard: [[{ text: '▶️ Subscribe @VirajVerse016', url: 'https://www.youtube.com/@VirajVerse016' }]]
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       // 3. Send Instruction for details
@@ -1212,11 +1255,11 @@ export async function handleTelegramWebhookUpdate(update: any) {
         ON CONFLICT(id) DO UPDATE SET is_approved=1, verification_status='APPROVED'
       `).run(`user_${targetChatId}`, targetChatId);
 
-      await botInstance.answerCallbackQuery(query.id, { text: `✅ Designer ${targetChatId} Approved!` }).catch(() => {});
-      await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, `🎉 *DESIGNER APPROVED:*\nUser ID \`${targetChatId}\` ko full active access grant kar diya gaya hai.`);
+      await botInstance.answerCallbackQuery(query.id, { text: `✅ Designer ${targetChatId} Approved!` }).catch(() => { });
+      await sendSafeTelegramMessage(getAdminChatId(), `🎉 *DESIGNER APPROVED:*\nUser ID \`${targetChatId}\` ko full active access grant kar diya gaya hai.`);
 
       const welcomeApproved = `🎉 *CONGRATULATIONS! YOUR DESIGNER ACCESS IS APPROVED!*\n\n` +
-        `Admin *@virajverse* ne aapka account verify aur approve kar diya hai!\n\n` +
+        `Admin *${getAdminHandle()}* ne aapka account verify aur approve kar diya hai!\n\n` +
         `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active hai!*\n` +
         `Niche diye gaye buttons se shuru karein ya direct prompt bhejein:`;
       return await sendSafeTelegramMessage(targetChatId, welcomeApproved, { reply_markup: DESIGNER_KEYBOARD });
@@ -1225,34 +1268,34 @@ export async function handleTelegramWebhookUpdate(update: any) {
     // Language Switcher Callbacks
     if (data === 'lang_english') {
       db.prepare("UPDATE users SET language = 'ENGLISH' WHERE telegram_chat_id = ?").run(chatId.toString());
-      await botInstance.answerCallbackQuery(query.id, { text: 'Language set to English 🇬🇧' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: 'Language set to English 🇬🇧' }).catch(() => { });
       return await sendSafeTelegramMessage(chatId, `🇬🇧 *Language Preference: ENGLISH*\n\nAll your future design briefs, concepts, headlines, and strategic advice will now be delivered in modern global English!\n\nUse the buttons below or type any prompt:`, { reply_markup: DESIGNER_KEYBOARD });
     }
 
     if (data === 'lang_hinglish') {
       db.prepare("UPDATE users SET language = 'HINGLISH' WHERE telegram_chat_id = ?").run(chatId.toString());
-      await botInstance.answerCallbackQuery(query.id, { text: 'Bhasha set to Hinglish 🇮🇳' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: 'Bhasha set to Hinglish 🇮🇳' }).catch(() => { });
       return await sendSafeTelegramMessage(chatId, `🇮🇳 *Bhasha Preference: HINGLISH*\n\nAb aapke saare design briefs, creative concepts aur advice natural Hinglish me milenge!\n\nNiche diye gaye buttons se shuru karein:`, { reply_markup: DESIGNER_KEYBOARD });
     }
 
     // Full Calendar Category Callbacks
     if (data.startsWith('cal_')) {
       const catKey = data.replace('cal_', '').toUpperCase();
-      await botInstance.answerCallbackQuery(query.id, { text: `🗓️ Loading ${catKey} Calendar...` }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: `🗓️ Loading ${catKey} Calendar...` }).catch(() => { });
       const calText = handleFullCalendarCommand(catKey);
       return await sendSafeTelegramMessage(chatId, calText, { reply_markup: getFullCalendarInlineKeyboard() });
     }
 
     if (data === 'menu_today') {
-      await botInstance.answerCallbackQuery(query.id, { text: '⚡ Loading Today\'s Focus...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '⚡ Loading Today\'s Focus...' }).catch(() => { });
       const response = await handleTodayCommand();
       return await sendSafeTelegramMessage(chatId, response);
     } else if (data === 'menu_upcoming') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📅 Loading Upcoming Calendar...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📅 Loading Upcoming Calendar...' }).catch(() => { });
       const upcomingList = handleUpcomingCommand();
       return await sendSafeTelegramMessage(chatId, upcomingList, { reply_markup: getUpcomingInlineKeyboard() });
     } else if (data === 'menu_clients') {
-      await botInstance.answerCallbackQuery(query.id, { text: '💼 Loading Client Profiles...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '💼 Loading Client Profiles...' }).catch(() => { });
       const clients: ClientRecord[] = db.prepare('SELECT * FROM clients').all();
       let clientText = `💼 *YOUR PRIVATE CLIENT BRAND PROFILES*\n\n`;
       clients.forEach(c => {
@@ -1260,7 +1303,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       });
       return await sendSafeTelegramMessage(chatId, clientText);
     } else if (data === 'menu_activity') {
-      await botInstance.answerCallbackQuery(query.id, { text: '👤 Loading Summary...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '👤 Loading Summary...' }).catch(() => { });
       const activityText = `👤 *YOUR CREATIVE AGENT ACTIVITY*\n\n` +
         `• *Role:* Senior Graphic Designer\n` +
         `• *Saved Briefings:* Active & Synchronized\n` +
@@ -1268,7 +1311,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `💬 *Tap any upcoming event or send a prompt to generate 6 ideas!*`;
       return await sendSafeTelegramMessage(chatId, activityText);
     } else if (data === 'menu_status') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📊 Loading Telemetry...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📊 Loading Telemetry...' }).catch(() => { });
       const statusText = `📊 *TALIYO AGENT TELEMETRY*\n\n` +
         `• *System Health:* 🟢 100% Operational\n` +
         `• *AI Routing Engine:* 27-Model NVIDIA NIM Cluster\n` +
@@ -1276,10 +1319,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `• *Cloud Platform:* Vercel Serverless Production`;
       return await sendSafeTelegramMessage(chatId, statusText);
     } else if (data === 'menu_contact') {
-      await botInstance.answerCallbackQuery(query.id, { text: '💬 Contact Admin...' }).catch(() => {});
-      return await sendSafeTelegramMessage(chatId, `📩 *ADMIN CONTACT & SUPPORT*\n\nFor Passcode Access, Custom Clients or Priority Support:\n👉 Telegram Admin: *${ADMIN_HANDLE}*`);
+      await botInstance.answerCallbackQuery(query.id, { text: '💬 Contact Admin...' }).catch(() => { });
+      return await sendSafeTelegramMessage(chatId, `📩 *ADMIN CONTACT & SUPPORT*\n\nFor Passcode Access, Custom Clients or Priority Support:\n👉 Telegram Admin: *${getAdminHandle()}*`);
     } else if (data === 'menu_help') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📖 Designer Guide...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📖 Designer Guide...' }).catch(() => { });
       const helpMsg = `📖 *TALIYO DESIGNER QUICK GUIDE*\n\n` +
         `1️⃣ *Instant Ideas:* Tap any button below or type any festival/prompt in chat.\n` +
         `2️⃣ *Visual Specs:* Get exact Hex Colors & Font Pairings with 1 tap.\n` +
@@ -1287,11 +1330,11 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, helpMsg);
     } else if (data.startsWith('gen_evt_')) {
       const evtName = data.replace('gen_evt_', '');
-      await botInstance.answerCallbackQuery(query.id, { text: `🎨 Generating 6 ideas for ${evtName}...` }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: `🎨 Generating 6 ideas for ${evtName}...` }).catch(() => { });
       return await processAgentDesignRequest(chatId, evtName, { id: 'default_user', name: 'Designer', telegram_chat_id: chatId.toString(), is_approved: 1, role: 'DESIGNER' });
     } else if (data.startsWith('specs_')) {
-      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Generating Visual Specs...' }).catch(() => {});
-      
+      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Generating Visual Specs...' }).catch(() => { });
+
       const colorSwatches = generateVisualColorSwatches([
         { role: 'Primary Accent', hex: '#FF5722', name: 'Electric Flame / Vibrant Energy' },
         { role: 'Secondary Tone', hex: '#6C5CE7', name: 'Cyber Violet / Royal Accent' },
@@ -1310,25 +1353,29 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `• Canvas Dimensions: \`1080 x 1350 px\` (4:5 Portrait Carousel)\n` +
         `• Safe Margins: \`60px\` padding on top/bottom/sides\n` +
         `• Aesthetic Rule: 70% negative space, 30% visual content focus.`;
-      
+
       await sendCelebrationAnimation(botInstance, chatId, 'PALETTE_GENERATED_ANIMATION', specsText);
     } else if (data.startsWith('fb_')) {
       const action = data.split('_')[1];
-      await botInstance.answerCallbackQuery(query.id, { text: `Preference saved: ${action}!` }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: `Preference saved: ${action}!` }).catch(() => { });
       await sendSafeTelegramMessage(chatId, `✨ *Agent Note:* Thank you! Preference recorded: *${action.toUpperCase()}*. Future briefs will align closer to this style.`);
     }
 
     // 🌟 INLINE ACTION HUB HANDLERS (Buttons right on the Chat Message)
     if (data === 'cmd_auto_radar') {
-      await botInstance.answerCallbackQuery(query.id, { text: '⚡ Fetching Today\'s Radar Brief...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '⚡ Fetching Today\'s Radar Brief...' }).catch(() => { });
       const res = await handleTodayCommand();
       return await sendSafeTelegramMessage(chatId, res, { reply_markup: DESIGNER_INLINE_HUB });
+    } else if (data === 'cmd_render') {
+      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Opening 3D Visual Studio...' }).catch(() => { });
+      const userRecord: UserRecord | null = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId.toString()) || null;
+      return await handleRenderImageCommand(chatId, 'Traditional Indian Brass Diya with Glowing Flame and Gold Filigree', userRecord);
     } else if (data === 'cmd_calendar') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🗓️ Loading 30-Day Calendar...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🗓️ Loading 30-Day Calendar...' }).catch(() => { });
       const calText = handleFullCalendarCommand('ALL');
       return await sendSafeTelegramMessage(chatId, calText, { reply_markup: getFullCalendarInlineKeyboard() });
     } else if (data === 'cmd_copilot') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Art Director Co-Pilot Specs...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Art Director Co-Pilot Specs...' }).catch(() => { });
       const copilotGuide = `🎨 *ART DIRECTOR CO-PILOT (AI DESIGN ASSISTANT)*\n\n` +
         `Main aapka real-time visual design partner hoon. Direct chat me sawal puchein:\n\n` +
         `• *"Real estate poster ke liye luxury color palette aur font batao"*\n` +
@@ -1337,7 +1384,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `👇 *Quick specs generate karne ke liye niche tap karein:*`;
       return await sendSafeTelegramMessage(chatId, copilotGuide, { reply_markup: DESIGNER_INLINE_HUB });
     } else if (data === 'cmd_clients') {
-      await botInstance.answerCallbackQuery(query.id, { text: '💼 Loading Client Profiles...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '💼 Loading Client Profiles...' }).catch(() => { });
       const clients: ClientRecord[] = db.prepare('SELECT * FROM clients').all();
       let clientText = `💼 *YOUR PRIVATE CLIENT BRAND PROFILES*\n\n`;
       clients.forEach(c => {
@@ -1345,7 +1392,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       });
       return await sendSafeTelegramMessage(chatId, clientText, { reply_markup: DESIGNER_INLINE_HUB });
     } else if (data === 'cmd_activity') {
-      await botInstance.answerCallbackQuery(query.id, { text: '👤 Loading Summary...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '👤 Loading Summary...' }).catch(() => { });
       const activityText = `👤 *YOUR CREATIVE AGENT ACTIVITY*\n\n` +
         `• *Role:* Senior Graphic Designer\n` +
         `• *Saved Briefings:* Active & Synchronized\n` +
@@ -1353,26 +1400,26 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `💬 *Tap any upcoming event or send a prompt to generate 6 ideas!*`;
       return await sendSafeTelegramMessage(chatId, activityText, { reply_markup: DESIGNER_INLINE_HUB });
     } else if (data === 'cmd_lang') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🌐 Select Language...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🌐 Select Language...' }).catch(() => { });
       return await sendSafeTelegramMessage(chatId, `🌐 *SELECT AGENT LANGUAGE / BHASHA:*`, { reply_markup: LANGUAGE_INLINE_KEYBOARD });
     } else if (data === 'cmd_guide') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📖 Designer Guide...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📖 Designer Guide...' }).catch(() => { });
       const helpMsg = `📖 *TALIYO DESIGNER QUICK GUIDE*\n\n` +
         `1️⃣ *Instant Ideas:* Tap any button below or type any festival/prompt in chat.\n` +
         `2️⃣ *Visual Specs:* Get exact Hex Colors & Font Pairings with 1 tap.\n` +
         `3️⃣ *Client Isolation:* Every designer's brand guidelines stay private.`;
       return await sendSafeTelegramMessage(chatId, helpMsg, { reply_markup: DESIGNER_INLINE_HUB });
     } else if (data === 'cmd_referral') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🎁 Opening Referral Hub...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🎁 Opening Referral Hub...' }).catch(() => { });
       return await handleReferralHub(chatId);
     } else if (data === 'adm_referrals') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🏆 Loading Referral Leaderboard...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🏆 Loading Referral Leaderboard...' }).catch(() => { });
       return await handleTopReferrers(chatId);
     } else if (data === 'adm_affiliates') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🔗 Loading Affiliate Hub...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🔗 Loading Affiliate Hub...' }).catch(() => { });
       return await handleAffiliateHub(chatId);
     } else if (data === 'adm_new_affiliate') {
-      await botInstance.answerCallbackQuery(query.id, { text: '➕ Create Affiliate Link...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '➕ Create Affiliate Link...' }).catch(() => { });
       const guide = `➕ *CREATE CUSTOM AFFILIATE / PROMO LINK*\n\n` +
         `Chat me command type karein:\n` +
         `\`/createaffiliate CODE BONUS_CREDITS CAMPAIGN_NAME\`\n\n` +
@@ -1385,7 +1432,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
     // 👑 ADMIN INLINE ACTION HANDLERS
     if (data === 'adm_panel') {
-      await botInstance.answerCallbackQuery(query.id, { text: '👑 Admin Suite...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '👑 Admin Suite...' }).catch(() => { });
       const usersCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_approved = 1').get()?.count || 1;
       const alertsCount = db.prepare('SELECT COUNT(*) as count FROM alerts').get()?.count || 0;
       const ideasCount = db.prepare('SELECT COUNT(*) as count FROM creative_ideas').get()?.count || 0;
@@ -1399,7 +1446,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `👇 *Tap any control button on this message:*`;
       return await sendSafeTelegramMessage(chatId, adminPanelMsg, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_designers') {
-      await botInstance.answerCallbackQuery(query.id, { text: '👥 Loading Designers...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '👥 Loading Designers...' }).catch(() => { });
       const users: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_approved = 1').all();
       let msg = `👥 *ACTIVE REGISTERED DESIGNERS (${users.length})*\n\n`;
       users.forEach((u, i) => {
@@ -1407,7 +1454,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       });
       return await sendSafeTelegramMessage(chatId, msg, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_pending') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🔔 Checking Pending...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🔔 Checking Pending...' }).catch(() => { });
       const pendingUsers: UserRecord[] = db.prepare("SELECT * FROM users WHERE verification_status = 'PENDING'").all();
       if (pendingUsers.length === 0) {
         return await sendSafeTelegramMessage(chatId, `🔔 *PENDING VERIFICATIONS*\n\nAbhi koi pending verification request nahi hai. Sabhi designers approved hain!`, { reply_markup: ADMIN_INLINE_HUB });
@@ -1419,12 +1466,12 @@ export async function handleTelegramWebhookUpdate(update: any) {
       pendingList += `👉 Approve karne ke liye type karein:\n\`/approve CHAT_ID\``;
       return await sendSafeTelegramMessage(chatId, pendingList, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_radar') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🚀 Triggering Radar Scan...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🚀 Triggering Radar Scan...' }).catch(() => { });
       await sendSafeTelegramMessage(chatId, `🚀 *AHEAD-OF-TIME RADAR SCAN TRIGGERED!*\n\n27-model AI cluster real-world data scrape aur 6-angle concepts synthesize kar raha hai...`);
       await runEventCheckAndAlert(botInstance);
       return await sendSafeTelegramMessage(chatId, `✅ *RADAR SCAN COMPLETE!* Saare briefing alerts broadcast ho chuke hain.`, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_broadcast') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📢 Broadcast Hub...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📢 Broadcast Hub...' }).catch(() => { });
       const broadcastHubMsg = `📢 *TALIYO MULTI-MEDIA BROADCAST HUB*\n\n` +
         `Sabhi approved designers ko instant push broadcast bhejein:\n\n` +
         `1️⃣ *Text Broadcast:*\n\`/broadcast Aapka Message\`\n\n` +
@@ -1432,10 +1479,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `3️⃣ *Titled Link + Button Broadcast:*\n\`/broadcastlink Headline | Description | ButtonText | ButtonURL\``;
       return await sendSafeTelegramMessage(chatId, broadcastHubMsg, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_dbsec') {
-      await botInstance.answerCallbackQuery(query.id, { text: '🛡️ Loading Database Security Shield...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '🛡️ Loading Database Security Shield...' }).catch(() => { });
       return await handleDbSecurityStatus(chatId);
     } else if (data === 'adm_ground') {
-      await botInstance.answerCallbackQuery(query.id, { text: '👥 Community Ground...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '👥 Community Ground...' }).catch(() => { });
       const setting = db.prepare("SELECT * FROM system_settings WHERE key = 'community_group'").get();
       const currentLink = setting?.value || 'https://t.me/virajverse';
       const isEnabled = setting?.is_enabled === 1;
@@ -1449,7 +1496,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `• Designers Ko Invite Bhejein: \`/notifygroup\``;
       return await sendSafeTelegramMessage(chatId, groundHubMsg, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_banned') {
-      await botInstance.answerCallbackQuery(query.id, { text: '⛔ Loading Banned Users...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '⛔ Loading Banned Users...' }).catch(() => { });
       const bannedUsers: UserRecord[] = db.prepare('SELECT * FROM users WHERE is_banned = 1 OR verification_status = "BANNED"').all();
       if (bannedUsers.length === 0) {
         return await sendSafeTelegramMessage(chatId, `✅ *BANNED USERS LIST*\n\nAbhi koi banned user nahi hai. Sabhi designers active aur safe hain!`, { reply_markup: ADMIN_INLINE_HUB });
@@ -1461,7 +1508,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       list += `👉 Unban karne ke liye type karein:\n\`/unban CHAT_ID\``;
       return await sendSafeTelegramMessage(chatId, list, { reply_markup: ADMIN_INLINE_HUB });
     } else if (data === 'adm_telemetry') {
-      await botInstance.answerCallbackQuery(query.id, { text: '📊 Telemetry...' }).catch(() => {});
+      await botInstance.answerCallbackQuery(query.id, { text: '📊 Telemetry...' }).catch(() => { });
       const statusText = `📊 *TALIYO AGENT TELEMETRY*\n\n` +
         `• *System Health:* 🟢 100% Operational\n` +
         `• *AI Routing Engine:* 27-Model NVIDIA NIM Cluster\n` +
@@ -1498,7 +1545,8 @@ export async function handleTelegramWebhookUpdate(update: any) {
     await sendSafeTelegramMessage(chatId, receivedAck);
 
     // Forward Photo Proof to Master Admin with 1-Click Action Buttons
-    if (MASTER_ADMIN_CHAT_ID && botInstance) {
+    const masterAdminId = getAdminChatId();
+    if (masterAdminId && botInstance) {
       const adminCaption = `🔔 *NEW DESIGNER REGISTRATION REQUEST*\n\n` +
         `• *Applicant:* ${applicantName}\n` +
         `• *Instagram:* [@${applicantHandle}](https://instagram.com/${applicantHandle})\n` +
@@ -1517,7 +1565,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       };
 
       try {
-        await botInstance.sendPhoto(MASTER_ADMIN_CHAT_ID, bestPhoto.file_id, {
+        await botInstance.sendPhoto(masterAdminId, bestPhoto.file_id, {
           caption: adminCaption,
           parse_mode: 'Markdown',
           reply_markup: adminVerifyButtons
@@ -1539,11 +1587,11 @@ export async function handleTelegramWebhookUpdate(update: any) {
     // Check Permanent Ban & Rapid Spam Flood Status
     const banCheck = checkSpamAndBanStatus(chatId);
     if (banCheck.isBanned) {
-      if (strChatId !== MASTER_ADMIN_CHAT_ID) {
+      if (strChatId !== getAdminChatId()) {
         const lockoutMsg = `⛔ *ACCOUNT PERMANENTLY BANNED / LOCKED OUT*\n\n` +
           `Aapka account rapid flooding / intentional spam / DDoS violation ke karan permanently ban kar diya gaya hai.\n\n` +
           `🔒 *Aapka access tabhi restore hoga jab Super Admin panel se unban karega.*\n` +
-          `👉 Support & Verification: *@virajverse*`;
+          `👉 Support & Verification: *${getAdminHandle()}*`;
         return await sendSafeTelegramMessage(chatId, lockoutMsg);
       }
     }
@@ -1596,18 +1644,19 @@ export async function handleTelegramWebhookUpdate(update: any) {
           `• YouTube: *${ytChannel}*${groupAction}\n\n` +
           `🚀 *Aapka Taliyo Creative Intelligence AI Agent 100% active ho chuka hai!*\n` +
           `Niche diye gaye buttons se shuru karein ya direct koi prompt bhejein:`;
-        
+
         await sendSafeTelegramMessage(chatId, instantApprovedMsg, { reply_markup: DESIGNER_KEYBOARD });
 
         // Inform Master Admin about automated AI approval
-        if (MASTER_ADMIN_CHAT_ID && botInstance) {
+        const currentAdminId = getAdminChatId();
+        if (currentAdminId && botInstance) {
           const adminNotice = `⚡ *[AI AUTO-APPROVED]* New Designer Verified!\n\n` +
             `• *Name:* ${name}\n` +
             `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
             `• *YouTube Channel:* ${ytChannel}\n` +
             `• *Chat ID:* \`${chatId}\`\n\n` +
             `🟢 *Status:* Automatically approved & activated in 0ms!`;
-          await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, adminNotice);
+          await sendSafeTelegramMessage(currentAdminId, adminNotice);
         }
         return;
       }
@@ -1624,11 +1673,12 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `• Name: *${name}*\n` +
         `• Instagram: *${targetHandle}*\n` +
         `• YouTube Channel: *${ytChannel}*\n\n` +
-        `Hamare Admin *@virajverse* ise review karke turant approve karenge!`;
+        `Hamare Admin *${getAdminHandle()}* ise review karke turant approve karenge!`;
       await sendSafeTelegramMessage(chatId, submittedMsg);
 
       // Instantly Alert Master Admin with 1-Click Approval Buttons
-      if (MASTER_ADMIN_CHAT_ID && botInstance) {
+      const adminToAlert = getAdminChatId();
+      if (adminToAlert && botInstance) {
         const adminAlertMsg = `🔔 *MANUAL REVIEW REQUIRED: DESIGNER REGISTRATION*\n\n` +
           `• *Applicant:* ${name}\n` +
           `• *Instagram:* [@${targetHandle}](https://instagram.com/${targetHandle})\n` +
@@ -1646,7 +1696,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
           ]
         };
 
-        await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, adminAlertMsg, {
+        await sendSafeTelegramMessage(adminToAlert, adminAlertMsg, {
           reply_markup: adminVerifyButtons
         });
       }
@@ -1669,11 +1719,11 @@ export async function handleTelegramWebhookUpdate(update: any) {
         const lockMsg = `🔒 *SECURITY LOCKOUT ACTIVE*\n\n` +
           `Too many incorrect passcode attempts!\n` +
           `Your chat is temporarily locked for *${remainingMinutes} more minute(s)*.\n\n` +
-          `📩 Contact *${ADMIN_HANDLE}* on Telegram for authorized passcode access.`;
+          `📩 Contact *${getAdminHandle()}* on Telegram for authorized passcode access.`;
         return await sendSafeTelegramMessage(chatId, lockMsg);
       }
 
-      if (inputCode === ADMIN_CODE) {
+      if (isValidInvitePasscode(inputCode)) {
         bruteForceTracker.delete(chatId.toString());
         db.prepare(`
           INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status)
@@ -1693,14 +1743,14 @@ export async function handleTelegramWebhookUpdate(update: any) {
           const maxLockMsg = `🚫 *TOO MANY FAILED ATTEMPTS!*\n\n` +
             `You have entered an incorrect passcode 3 times.\n` +
             `Your chat has been *LOCKED for 10 minutes* for security protection.\n\n` +
-            `👉 Contact Admin *${ADMIN_HANDLE}* to get your official invitation code.`;
+            `👉 Contact Admin *${getAdminHandle()}* to get your official invitation code.`;
           return await sendSafeTelegramMessage(chatId, maxLockMsg);
         } else {
           bruteForceTracker.set(chatId.toString(), tracker);
           const remaining = 3 - tracker.attempts;
           const failMsg = `❌ *INVALID PASSCODE!*\n\n` +
             `Remaining attempts before 10-minute lockout: *${remaining}/3*.\n\n` +
-            `To get your official Admin Passcode, please contact *${ADMIN_HANDLE}* on Telegram.`;
+            `To get your official Admin Passcode, please contact *${getAdminHandle()}* on Telegram.`;
           return await sendSafeTelegramMessage(chatId, failMsg);
         }
       }
@@ -1751,14 +1801,15 @@ export async function handleTelegramWebhookUpdate(update: any) {
             await sendCelebrationAnimation(botInstance, chatId, 'VIP_WELCOME_ANIMATION', vipWelcome, DESIGNER_KEYBOARD);
 
             // Notify Master Admin in real-time
-            if (MASTER_ADMIN_CHAT_ID && botInstance) {
+            const currentAdminChatId = getAdminChatId();
+            if (currentAdminChatId && botInstance) {
               const adminAffNotice = `💎 *[AFFILIATE CONVERSION]* New Designer Joined!\n\n` +
                 `• *Campaign:* *${campaign.campaign_name}* (\`${campaign.code}\`)\n` +
                 `• *Designer:* *${msg.from?.first_name || 'Designer'}* (@${msg.from?.username || 'n/a'})\n` +
                 `• *Chat ID:* \`${strChatId}\`\n` +
                 `• *Bonus Credits Granted:* \`+${bonus} Credits\`\n` +
                 `• *Total Campaign Signups:* **${(campaign.conversions_count || 0) + 1}**`;
-              await sendSafeTelegramMessage(MASTER_ADMIN_CHAT_ID, adminAffNotice);
+              await sendSafeTelegramMessage(currentAdminChatId, adminAffNotice);
             }
             return;
           }
@@ -1768,7 +1819,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         if (payload.startsWith('ref_')) {
           const referrerId = payload.replace('ref_', '').trim();
           const existingUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId);
-          
+
           if (!existingUser && referrerId && referrerId !== strChatId) {
             const referrer: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(referrerId);
             if (referrer) {
@@ -1781,7 +1832,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
               const bonusCredits = 50;
               const newRefCount = (referrer.referral_count || 0) + 1;
               const newCredits = (referrer.referral_credits || 0) + bonusCredits;
-              
+
               let newTier: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND' = 'BRONZE';
               if (newRefCount >= 30) newTier = 'DIAMOND';
               else if (newRefCount >= 15) newTier = 'GOLD';
@@ -1804,8 +1855,8 @@ export async function handleTelegramWebhookUpdate(update: any) {
                 `• *Total Referrals:* **${newRefCount} Designers**\n` +
                 `• *Current Tier:* **${newTier}**\n\n` +
                 `Keep inviting peers to unlock Gold & Diamond VIP Perks!`;
-              
-              await sendCelebrationAnimation(botInstance, referrerId, 'REFERRAL_REWARD_ANIMATION', referrerNotice).catch(() => {});
+
+              await sendCelebrationAnimation(botInstance, referrerId, 'REFERRAL_REWARD_ANIMATION', referrerNotice).catch(() => { });
             }
           }
         }
@@ -1847,7 +1898,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
           `• \`/addcredits CHAT_ID AMOUNT\`\n` +
           `• \`/prunecache\`\n\n` +
           `👇 *Tap any admin button below to execute instant controls:*`;
-        
+
         return await sendSafeTelegramMessage(chatId, adminPanelMsg, { reply_markup: ADMIN_MASTER_KEYBOARD });
       }
 
@@ -1958,7 +2009,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
           `Super Admin *@virajverse* ne aapka account unban karke access restore kar diya hai!\n\n` +
           `🚀 *Aapka Taliyo Creative Intelligence AI Agent wapas 100% active ho chuka hai!*\n` +
           `Niche diye gaye buttons se shuru karein:`;
-        
+
         await sendSafeTelegramMessage(targetId, unbannedMsg, { reply_markup: DESIGNER_KEYBOARD });
         return await sendSafeTelegramMessage(chatId, `✅ *User Unbanned Successfully:*\n• Chat ID: \`${targetId}\`\n• Status: 🟢 Fully restored & notified!`);
       }
@@ -2028,7 +2079,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
           `Hamara official **Taliyo / VirajVerse Designer Ground** active ho chuka hai!\n\n` +
           `Yahan sabhi approved graphic designers connect karte hain, portfolio share karte hain aur live collaboration karte hain.\n\n` +
           `👇 Niche button se join karein aur continue studio access karein:`;
-        
+
         let sentCount = 0;
         for (const u of activeUsers) {
           if (u.telegram_chat_id && botInstance) {
@@ -2040,7 +2091,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
                   [{ text: '🚀 Continue to AI Studio', callback_data: 'menu_continue' }]
                 ]
               }
-            }).catch(() => {});
+            }).catch(() => { });
             sentCount++;
           }
         }
@@ -2140,7 +2191,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         let sentCount = 0;
         for (const u of users) {
           if (u.telegram_chat_id && u.telegram_chat_id !== chatId.toString()) {
-            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *${title}*\n\n${body}`, { reply_markup: replyMarkup }).catch(() => {});
+            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *${title}*\n\n${body}`, { reply_markup: replyMarkup }).catch(() => { });
             sentCount++;
           }
         }
@@ -2154,7 +2205,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
         let sentCount = 0;
         for (const u of users) {
           if (u.telegram_chat_id && u.telegram_chat_id !== chatId.toString()) {
-            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *OFFICIAL ANNOUNCEMENT*\n\n${broadcastMsg}`).catch(() => {});
+            await sendSafeTelegramMessage(u.telegram_chat_id, `📢 *OFFICIAL ANNOUNCEMENT*\n\n${broadcastMsg}`).catch(() => { });
             sentCount++;
           }
         }
@@ -2244,10 +2295,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const welcome = auth.isAdmin
         ? `👑 *Welcome Master Admin (@virajverse)!*\n\nYour Super Admin Master Control Dashboard is active. Use the docked admin keypad below for controls or send any creative design prompt!`
         : `🤖 *Hey ${msg.from?.first_name || 'Designer'}! Welcome to Taliyo Creative Intelligence*\n\n` +
-          `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
-          `🎁 *Invite & Earn Active:* Apne designer dosto ko invite karein aur **Free AI Credits & VIP Queue** unlock karein!\n\n` +
-          `👇 *Use the persistent menu buttons below your typing box for 1-tap navigation, or type any prompt naturally!*`;
-      
+        `I am your Senior AI Design Partner — dedicated 100% to **Graphic Design Strategy, Visual Direction, Headlines, Color Palettes & Social Campaigns**!\n\n` +
+        `🎁 *Invite & Earn Active:* Apne designer dosto ko invite karein aur **Free AI Credits & VIP Queue** unlock karein!\n\n` +
+        `👇 *Use the persistent menu buttons below your typing box for 1-tap navigation, or type any prompt naturally!*`;
+
       return await sendSafeTelegramMessage(chatId, welcome, {
         reply_markup: getUserKeyboard(chatId)
       });
@@ -2268,26 +2319,30 @@ export async function handleTelegramWebhookUpdate(update: any) {
     if (text === '/contact' || text === '💬 Contact Admin') {
       const contactMsg = `📩 *ADMIN CONTACT & SUPPORT*\n\n` +
         `For Admin Passcode Access, Custom Client Onboarding, or Priority Support, contact:\n\n` +
-        `👉 Telegram Admin: *${ADMIN_HANDLE}*`;
+        `👉 Telegram Admin: *${getAdminHandle()}*`;
       return await sendSafeTelegramMessage(chatId, contactMsg);
+    }
+
+    if (text === '🖼️ 3D Visual Render' || text === '/render' || text.startsWith('/render ') || text.startsWith('/image ')) {
+      return await handleRenderImageCommand(chatId, text, auth.user);
     }
 
     if (text === '🎨 Art Director Co-Pilot' || text === '/copilot') {
       const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
       const copilotMsg = isEnglish
         ? `🎨 *TALIYO ART DIRECTOR CO-PILOT ACTIVE!*\n\n` +
-          `Working on an active design right now? Get precision creative feedback:\n\n` +
-          `• *Exact Hex Palettes:* "Suggest luxury real estate palette"\n` +
-          `• *Font Pairings:* "Display + body font pairing for SaaS"\n` +
-          `• *Headline Copy:* "Make this fitness headline punchy"\n` +
-          `• *Figma Specs:* "What margins for 1080x1350 carousel"\n\n` +
-          `👇 *Type your design query directly into chat!*`
+        `Working on an active design right now? Get precision creative feedback:\n\n` +
+        `• *Exact Hex Palettes:* "Suggest luxury real estate palette"\n` +
+        `• *Font Pairings:* "Display + body font pairing for SaaS"\n` +
+        `• *Headline Copy:* "Make this fitness headline punchy"\n` +
+        `• *Figma Specs:* "What margins for 1080x1350 carousel"\n\n` +
+        `👇 *Type your design query directly into chat!*`
         : `🎨 *TALIYO ART DIRECTOR CO-PILOT ACTIVE!*\n\nAap abhi jo design bana rahe hain, usme direct precision help lein:\n\n` +
-          `• *Exact Hex Palettes:* "Luxury real estate poster ke liye color palette batao"\n` +
-          `• *Font Pairings:* "SaaS carousel ke liye best font pairing"\n` +
-          `• *Headline Copy:* "Is headline ko luxurious aur punchy banao"\n` +
-          `• *Figma/Canva Specs:* "1080x1350 carousel ke liye margin aur padding"\n\n` +
-          `👇 *Koi bhi query direct chat me likh kar bhejiye!*`;
+        `• *Exact Hex Palettes:* "Luxury real estate poster ke liye color palette batao"\n` +
+        `• *Font Pairings:* "SaaS carousel ke liye best font pairing"\n` +
+        `• *Headline Copy:* "Is headline ko luxurious aur punchy banao"\n` +
+        `• *Figma/Canva Specs:* "1080x1350 carousel ke liye margin aur padding"\n\n` +
+        `👇 *Koi bhi query direct chat me likh kar bhejiye!*`;
       return await sendSafeTelegramMessage(chatId, copilotMsg);
     }
 
@@ -2295,21 +2350,21 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
       const guideMsg = isEnglish
         ? `📖 *TALIYO AUTONOMOUS CREATIVE AGENT GUIDE*\n\n` +
-          `1️⃣ *🤖 Autonomous Agent AI:* Complex goal planning, live web scraping, and quality score audit.\n` +
-          `2️⃣ *⚡ Auto Radar Brief:* 1-tap 6-concept campaign strategy for upcoming occasions.\n` +
-          `3️⃣ *🗓️ Full Calendar:* 365-day rolling festival & marketing events calendar.\n` +
-          `4️⃣ *🎨 Art Director Co-Pilot:* Precision Hex colors, fonts & headline feedback.\n` +
-          `5️⃣ *💼 Client Profiles:* Private client brand guidelines & tone memory.\n` +
-          `6️⃣ *🌐 Language:* 1-tap toggle between English and Hinglish.\n\n` +
-          `📩 *Priority Support:* Contact *@virajverse* on Telegram.`
+        `1️⃣ *🤖 Autonomous Agent AI:* Complex goal planning, live web scraping, and quality score audit.\n` +
+        `2️⃣ *⚡ Auto Radar Brief:* 1-tap 6-concept campaign strategy for upcoming occasions.\n` +
+        `3️⃣ *🗓️ Full Calendar:* 365-day rolling festival & marketing events calendar.\n` +
+        `4️⃣ *🎨 Art Director Co-Pilot:* Precision Hex colors, fonts & headline feedback.\n` +
+        `5️⃣ *💼 Client Profiles:* Private client brand guidelines & tone memory.\n` +
+        `6️⃣ *🌐 Language:* 1-tap toggle between English and Hinglish.\n\n` +
+        `📩 *Priority Support:* Contact *@virajverse* on Telegram.`
         : `📖 *TALIYO AUTONOMOUS CREATIVE AGENT GUIDE*\n\n` +
-          `1️⃣ *🤖 Autonomous Agent AI:* Complex goal planning, live web scraping aur self-audit quality score.\n` +
-          `2️⃣ *⚡ Auto Radar Brief:* 1-tap me upcoming event ki 6-concept strategy.\n` +
-          `3️⃣ *🗓️ Full Calendar:* Poore saal ke festivals aur marketing dates.\n` +
-          `4️⃣ *🎨 Art Director Co-Pilot:* Active design ke liye exact colors, fonts aur copy.\n` +
-          `5️⃣ *💼 Client Profiles:* Private client brand guidelines aur styling.\n` +
-          `6️⃣ *🌐 Language:* 1-tap me English aur Hinglish switch karein.\n\n` +
-          `📩 *Priority Support:* Contact *@virajverse* on Telegram.`;
+        `1️⃣ *🤖 Autonomous Agent AI:* Complex goal planning, live web scraping aur self-audit quality score.\n` +
+        `2️⃣ *⚡ Auto Radar Brief:* 1-tap me upcoming event ki 6-concept strategy.\n` +
+        `3️⃣ *🗓️ Full Calendar:* Poore saal ke festivals aur marketing dates.\n` +
+        `4️⃣ *🎨 Art Director Co-Pilot:* Active design ke liye exact colors, fonts aur copy.\n` +
+        `5️⃣ *💼 Client Profiles:* Private client brand guidelines aur styling.\n` +
+        `6️⃣ *🌐 Language:* 1-tap me English aur Hinglish switch karein.\n\n` +
+        `📩 *Priority Support:* Contact *@virajverse* on Telegram.`;
       return await sendSafeTelegramMessage(chatId, guideMsg);
     }
 
@@ -2342,7 +2397,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const alertNotice = isEnglish
         ? `🎯 *[AHEAD-OF-TIME RADAR BRIEF]*\n\nHey ${auth.user?.name || 'Designer'}! Upcoming in the next 2-3 days: *${topEvt.name}*. Get your client campaigns ready!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`
         : `🎯 *[AHEAD-OF-TIME AUTO RADAR]*\n\nHey ${auth.user?.name || 'Designer'}! Next 2-3 dino me *${topEvt.name}* aa raha hai. Apne clients ke liye yeh design bana lo!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`;
-      
+
       await sendSafeTelegramMessage(chatId, alertNotice);
       return await processAgentDesignRequest(chatId, topEvt.name, auth.user);
     }
@@ -2393,6 +2448,13 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
       if (agentRes.actionType === 'DIRECT_REPLY') {
         return await sendSafeTelegramMessage(chatId, agentRes.deliverable);
+      }
+
+      if (agentRes.imageBuffer) {
+        return await botInstance.sendPhoto(chatId, agentRes.imageBuffer, {
+          caption: agentRes.deliverable,
+          parse_mode: 'Markdown'
+        });
       }
 
       // If Campaign Briefing was generated

@@ -544,7 +544,11 @@ export async function initDatabase() {
       for (const row of affRes.rows) {
         memCache.affiliate_campaigns.set(row.id as string, row as any);
       }
-      console.log(`[Database] 🚀 Cloud In-Memory Hydrated: ${memCache.users.size} Users, ${memCache.events.size} Events, ${memCache.clients.size} Clients, ${memCache.referrals.size} Referrals, ${memCache.affiliate_campaigns.size} Affiliates`);
+      const settingsRes = await tursoClient.execute("SELECT * FROM system_settings");
+      for (const row of settingsRes.rows) {
+        memCache.settings.set(row.key as string, { key: row.key as string, value: row.value as string, is_enabled: Number(row.is_enabled || 1) });
+      }
+      console.log(`[Database] 🚀 Cloud In-Memory Hydrated: ${memCache.users.size} Users, ${memCache.events.size} Events, ${memCache.clients.size} Clients, ${memCache.settings.size} Settings`);
     } catch (e: any) {
       console.warn(`[Database Cache Hydration]: ${e.message}`);
     }
@@ -607,6 +611,46 @@ export async function initDatabase() {
 
 // Auto-run schema sync
 initDatabase().catch(() => {});
+
+/**
+ * Dynamic System Settings & Admin Config Helpers (Turso Cloud DB)
+ */
+export function getSystemSetting(key: string, fallback: string = ''): string {
+  const setting = memCache.settings.get(key);
+  if (setting && setting.value) return setting.value;
+  return fallback;
+}
+
+export function setSystemSetting(key: string, value: string, isEnabled: number = 1): void {
+  db.prepare(`
+    INSERT INTO system_settings (key, value, is_enabled, updated_at)
+    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, is_enabled = excluded.is_enabled, updated_at = CURRENT_TIMESTAMP
+  `).run(key, value, isEnabled);
+  memCache.settings.set(key, { key, value, is_enabled: isEnabled });
+}
+
+export function getAdminHandle(): string {
+  return getSystemSetting('ADMIN_TELEGRAM_HANDLE', '@virajverse');
+}
+
+export function getAdminChatId(): string {
+  return getSystemSetting('TELEGRAM_DEFAULT_CHAT_ID', '1634951702');
+}
+
+export function isValidInvitePasscode(code: string): boolean {
+  if (!code) return false;
+  const cleanCode = code.trim().toUpperCase();
+  const dbPass = getSystemSetting('ADMIN_INVITE_CODE', 'TALIYO2026').toUpperCase();
+  if (cleanCode === dbPass) return true;
+
+  try {
+    const row = db.prepare('SELECT * FROM invite_codes WHERE code = ? AND is_active = 1').get(cleanCode);
+    return !!row;
+  } catch {
+    return cleanCode === 'TALIYO2026';
+  }
+}
 
 export { db };
 export default db;
