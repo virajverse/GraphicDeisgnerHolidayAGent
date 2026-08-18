@@ -2294,19 +2294,21 @@ export async function handleTelegramWebhookUpdate(update: any) {
     if (text === '📖 Guide & Support' || text === '/help' || text === '📖 Designer Guide' || text === '📖 Full Designer Guide') {
       const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
       const guideMsg = isEnglish
-        ? `📖 *TALIYO CREATIVE STUDIO GUIDE & SUPPORT*\n\n` +
-          `1️⃣ *⚡ Auto Radar Brief:* 1-tap ahead-of-time festival/event strategy.\n` +
-          `2️⃣ *🗓️ Full Calendar:* Browse full-year marketing & cultural dates.\n` +
-          `3️⃣ *🎨 Art Director Co-Pilot:* Precision colors, fonts & headline feedback.\n` +
-          `4️⃣ *💼 Client Profiles:* Private client brand guidelines & tone.\n` +
-          `5️⃣ *🌐 Language:* 1-tap toggle between English and Hinglish.\n\n` +
+        ? `📖 *TALIYO AUTONOMOUS CREATIVE AGENT GUIDE*\n\n` +
+          `1️⃣ *🤖 Autonomous Agent AI:* Complex goal planning, live web scraping, and quality score audit.\n` +
+          `2️⃣ *⚡ Auto Radar Brief:* 1-tap 6-concept campaign strategy for upcoming occasions.\n` +
+          `3️⃣ *🗓️ Full Calendar:* 365-day rolling festival & marketing events calendar.\n` +
+          `4️⃣ *🎨 Art Director Co-Pilot:* Precision Hex colors, fonts & headline feedback.\n` +
+          `5️⃣ *💼 Client Profiles:* Private client brand guidelines & tone memory.\n` +
+          `6️⃣ *🌐 Language:* 1-tap toggle between English and Hinglish.\n\n` +
           `📩 *Priority Support:* Contact *@virajverse* on Telegram.`
-        : `📖 *TALIYO CREATIVE STUDIO GUIDE & SUPPORT*\n\n` +
-          `1️⃣ *⚡ Auto Radar Brief:* 1-tap me upcoming event ki 6-concept strategy.\n` +
-          `2️⃣ *🗓️ Full Calendar:* Poore saal ke festivals aur marketing dates.\n` +
-          `3️⃣ *🎨 Art Director Co-Pilot:* Active design ke liye exact colors, fonts aur copy.\n` +
-          `4️⃣ *💼 Client Profiles:* Private client brand guidelines aur styling.\n` +
-          `5️⃣ *🌐 Language:* 1-tap me English aur Hinglish switch karein.\n\n` +
+        : `📖 *TALIYO AUTONOMOUS CREATIVE AGENT GUIDE*\n\n` +
+          `1️⃣ *🤖 Autonomous Agent AI:* Complex goal planning, live web scraping aur self-audit quality score.\n` +
+          `2️⃣ *⚡ Auto Radar Brief:* 1-tap me upcoming event ki 6-concept strategy.\n` +
+          `3️⃣ *🗓️ Full Calendar:* Poore saal ke festivals aur marketing dates.\n` +
+          `4️⃣ *🎨 Art Director Co-Pilot:* Active design ke liye exact colors, fonts aur copy.\n` +
+          `5️⃣ *💼 Client Profiles:* Private client brand guidelines aur styling.\n` +
+          `6️⃣ *🌐 Language:* 1-tap me English aur Hinglish switch karein.\n\n` +
           `📩 *Priority Support:* Contact *@virajverse* on Telegram.`;
       return await sendSafeTelegramMessage(chatId, guideMsg);
     }
