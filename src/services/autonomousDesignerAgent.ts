@@ -107,7 +107,7 @@ export async function runAutonomousDesignerAgent(
   const executionChain: AgentThoughtStep[] = [];
   let stepIndex = 1;
 
-  console.log(`[AutonomousAgent] 🤖 Initiating Agentic Workflow for Goal: "${userGoal}"...`);
+  console.log(`[GraphicDesignerAgentAI] 🤖 Initiating Dedicated Design Agent AI for Goal: "${userGoal}"...`);
 
   // -------------------------------------------------------------
   // STEP 1: Autonomous Goal Decomposition & Sub-Task Planning

@@ -795,7 +795,7 @@ export async function handleDbSecurityStatus(chatId: string | number) {
 }
 
 /**
- * 🤖 True Autonomous Agentic AI Workflow Execution
+ * 🤖 Dedicated Graphic Designer Agent AI Execution
  */
 export async function handleAutonomousAgentCommand(
   chatId: string | number,
@@ -807,9 +807,9 @@ export async function handleAutonomousAgentCommand(
 
   const goal = promptText.replace(/^\/agent/i, '').replace(/^🤖 Autonomous Agent AI/i, '').trim() || 'Generate high-impact upcoming festival marketing campaign with 3D art direction and visual color palettes';
 
-  const initialMsg = `🤖 *TALIYO AUTONOMOUS AGENT ACTIVE*\n\n` +
-    `🎯 *Goal:* "${goal}"\n` +
-    `⚡ *Decomposing sub-tasks & orchestrating perception tools...*\n\n` +
+  const initialMsg = `🤖 *TALIYO GRAPHIC DESIGNER AGENT AI ACTIVE*\n\n` +
+    `🎯 *Design Goal:* "${goal}"\n` +
+    `⚡ *Executing single-purpose design pipeline...*\n\n` +
     `_Step 1/4: Scraping live cultural hashtags & news..._\n` +
     `_Step 2/4: Checking brand guidelines & client profile..._\n` +
     `_Step 3/4: Synthesizing multi-angle creative design concepts..._\n` +
@@ -820,7 +820,7 @@ export async function handleAutonomousAgentCommand(
   try {
     const trace = await runAutonomousDesignerAgent(goal, user);
 
-    let thoughtLog = `🧩 *AGENTIC THOUGHT & ACTION TRACE:*\n`;
+    let thoughtLog = `🧩 *AGENT AI EXECUTION TRACE:*\n`;
     thoughtLog += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     trace.executionChain.forEach(step => {
       thoughtLog += `*Step ${step.stepNumber}:* \`${step.actionName}\` (${step.durationMs}ms)\n`;
