@@ -505,6 +505,12 @@ export async function initDatabase() {
     // Auto-migrate user columns if they don't exist yet
     const migrations = [
       "ALTER TABLE users ADD COLUMN username TEXT;",
+      "ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 1;",
+      "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'DESIGNER';",
+      "ALTER TABLE users ADD COLUMN verification_status TEXT DEFAULT 'APPROVED';",
+      "ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0;",
+      "ALTER TABLE users ADD COLUMN ban_reason TEXT;",
+      "ALTER TABLE users ADD COLUMN instagram_handle TEXT;",
       "ALTER TABLE users ADD COLUMN referred_by TEXT;",
       "ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0;",
       "ALTER TABLE users ADD COLUMN referral_credits INTEGER DEFAULT 0;",

@@ -201,6 +201,15 @@ async function runFullAudit() {
   const legitQuery = inspectAndSanitizeQuery("SELECT * FROM users WHERE telegram_chat_id = ?", ["1634951702"]);
   check('DB Security Shield', 'Legitimate Parameter Validation', legitQuery.isSafe === true && legitQuery.sanitizedArgs[0] === '1634951702', 'Authorized valid parameters without false positive');
 
+  // 10. AUTONOMOUS GRAPHIC DESIGNER AGENT CORE (ReAct Loop)
+  console.log('\n🤖 STEP 10: Verifying Autonomous Graphic Designer Agent Core...');
+  const { runAutonomousDesignerAgent } = await import('../src/services/autonomousDesignerAgent.js');
+  const agentTrace = await runAutonomousDesignerAgent('Design a modern 3D Diwali festival campaign for a luxury fashion brand');
+  check('Autonomous Agent AI', 'Goal Decomposition & Planning', agentTrace.plannedSteps.length >= 2, `Planned ${agentTrace.plannedSteps.length} systematic sub-tasks`);
+  check('Autonomous Agent AI', 'Multi-Tool Perception Chain', agentTrace.executionChain.length >= 3, `Executed ${agentTrace.executionChain.length} tool actions`);
+  check('Autonomous Agent AI', 'Self-Critique & Aesthetic Audit', agentTrace.critiqueScore >= 75, `Agent Audit Score: ${agentTrace.critiqueScore}/100`);
+  check('Autonomous Agent AI', 'Deliverable Synthesis', agentTrace.finalDeliverable.includes('READY-TO-DESIGN') && agentTrace.finalDeliverable.includes('COLOR PALETTE'), 'Generated complete end-to-end design brief with swatches');
+
   // SUMMARY REPORT
   console.log('\n======================================================');
   const total = results.length;

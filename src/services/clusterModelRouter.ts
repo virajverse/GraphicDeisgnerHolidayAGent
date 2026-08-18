@@ -16,6 +16,8 @@ export function getNvidiaClient(): OpenAI {
     nvidiaClientInstance = new OpenAI({
       apiKey: apiKey,
       baseURL: 'https://integrate.api.nvidia.com/v1',
+      timeout: 15000,
+      maxRetries: 0
     });
   }
   return nvidiaClientInstance;

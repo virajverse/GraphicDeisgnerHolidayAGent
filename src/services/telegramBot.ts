@@ -14,6 +14,7 @@ import { runEventCheckAndAlert } from './scheduler.js';
 import { EventRecord, UserRecord, ClientRecord, AlertRecord, CreativeIdeaRecord, ReferralRecord, AffiliateCampaignRecord } from '../types/database.js';
 import { EventContext, IdeationResult } from '../types/models.js';
 import { sendCelebrationAnimation, generateVisualColorSwatches, VISUAL_ASSETS } from './visualMediaEngine.js';
+import { runAutonomousDesignerAgent } from './autonomousDesignerAgent.js';
 
 const ADMIN_CODE = process.env.ADMIN_INVITE_CODE || 'TALIYO2026';
 const ADMIN_HANDLE = process.env.ADMIN_TELEGRAM_HANDLE || '@virajverse';
@@ -98,10 +99,10 @@ function checkUserCooldown(chatId: string | number): { allowed: boolean; remaini
 // Keyboards
 export const DESIGNER_KEYBOARD = {
   keyboard: [
-    [{ text: '⚡ Auto Radar Brief' }, { text: '🗓️ Full Calendar' }],
-    [{ text: '🎨 Art Director Co-Pilot' }, { text: '💼 Client Profiles' }],
-    [{ text: '🎁 Invite & Earn' }, { text: '👤 My Activity' }],
-    [{ text: '🌐 Language (EN/Hinglish)' }, { text: '📖 Guide & Support' }]
+    [{ text: '⚡ Auto Radar Brief' }, { text: '🤖 Autonomous Agent AI' }],
+    [{ text: '🗓️ Full Calendar' }, { text: '🎨 Art Director Co-Pilot' }],
+    [{ text: '💼 Client Profiles' }, { text: '🎁 Invite & Earn' }],
+    [{ text: '👤 My Activity' }, { text: '📖 Guide & Support' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -112,18 +113,18 @@ export const DESIGNER_INLINE_HUB = {
   inline_keyboard: [
     [
       { text: '⚡ Auto Radar Brief', callback_data: 'cmd_auto_radar' },
-      { text: '🗓️ 30-Day Calendar', callback_data: 'cmd_calendar' }
+      { text: '🤖 Autonomous Agent AI', callback_data: 'cmd_agent' }
     ],
     [
-      { text: '🎨 Art Director Co-Pilot', callback_data: 'cmd_copilot' },
-      { text: '💼 Client Profiles', callback_data: 'cmd_clients' }
+      { text: '🗓️ 30-Day Calendar', callback_data: 'cmd_calendar' },
+      { text: '🎨 Art Director Co-Pilot', callback_data: 'cmd_copilot' }
     ],
     [
-      { text: '🎁 Invite & Earn', callback_data: 'cmd_referral' },
-      { text: '👤 My Activity', callback_data: 'cmd_activity' }
+      { text: '💼 Client Profiles', callback_data: 'cmd_clients' },
+      { text: '🎁 Invite & Earn', callback_data: 'cmd_referral' }
     ],
     [
-      { text: '🌐 Language Switch', callback_data: 'cmd_lang' },
+      { text: '👤 My Activity', callback_data: 'cmd_activity' },
       { text: '📖 Guide & Support', callback_data: 'cmd_guide' }
     ]
   ]
@@ -791,6 +792,69 @@ export async function handleDbSecurityStatus(chatId: string | number) {
   return await sendSafeTelegramMessage(chatId, msg, {
     reply_markup: ADMIN_INLINE_HUB
   });
+}
+
+/**
+ * 🤖 True Autonomous Agentic AI Workflow Execution
+ */
+export async function handleAutonomousAgentCommand(
+  chatId: string | number,
+  promptText: string,
+  user: UserRecord | null = null
+) {
+  if (!botInstance) return;
+  const strChatId = chatId.toString();
+
+  const goal = promptText.replace(/^\/agent/i, '').replace(/^🤖 Autonomous Agent AI/i, '').trim() || 'Generate high-impact upcoming festival marketing campaign with 3D art direction and visual color palettes';
+
+  const initialMsg = `🤖 *TALIYO AUTONOMOUS AGENT ACTIVE*\n\n` +
+    `🎯 *Goal:* "${goal}"\n` +
+    `⚡ *Decomposing sub-tasks & orchestrating perception tools...*\n\n` +
+    `_Step 1/4: Scraping live cultural hashtags & news..._\n` +
+    `_Step 2/4: Checking brand guidelines & client profile..._\n` +
+    `_Step 3/4: Synthesizing multi-angle creative design concepts..._\n` +
+    `_Step 4/4: Running Art Director self-critique & aesthetic audit..._`;
+
+  const progressMsg = await botInstance.sendMessage(chatId, initialMsg, { parse_mode: 'Markdown' }).catch(() => null);
+
+  try {
+    const trace = await runAutonomousDesignerAgent(goal, user);
+
+    let thoughtLog = `🧩 *AGENTIC THOUGHT & ACTION TRACE:*\n`;
+    thoughtLog += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    trace.executionChain.forEach(step => {
+      thoughtLog += `*Step ${step.stepNumber}:* \`${step.actionName}\` (${step.durationMs}ms)\n`;
+      thoughtLog += `💭 _"${step.thought}"_\n`;
+      thoughtLog += `🔍 *Observation:* ${step.observation}\n\n`;
+    });
+
+    if (progressMsg) {
+      await botInstance.editMessageText(thoughtLog, {
+        chat_id: chatId,
+        message_id: progressMsg.message_id,
+        parse_mode: 'Markdown'
+      }).catch(() => {});
+    }
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '🎨 Visual Specs (Colors & Fonts)', callback_data: `specs_agent` },
+          { text: '🔄 Re-Run Agent', callback_data: `cmd_agent` }
+        ],
+        [
+          { text: '👍 Useful Deliverable', callback_data: `fb_like_agent` },
+          { text: '⭐ Save to Studio', callback_data: `fb_save_agent` }
+        ]
+      ]
+    };
+
+    await sendSafeTelegramMessage(chatId, trace.finalDeliverable, { reply_markup: inlineKeyboard });
+
+  } catch (err: any) {
+    console.error(`[Autonomous Agent Error]: ${err.message}`);
+    await sendSafeTelegramMessage(chatId, `⚠️ *Agent Notice:* Agent workflow encountered: ${err.message}. Please try again.`);
+  }
 }
 
 function getDaysRemaining(eventDateMMDD: string): number {
@@ -2187,6 +2251,10 @@ export async function handleTelegramWebhookUpdate(update: any) {
       return await sendSafeTelegramMessage(chatId, welcome, {
         reply_markup: getUserKeyboard(chatId)
       });
+    }
+
+    if (text === '🤖 Autonomous Agent AI' || text.startsWith('/agent')) {
+      return await handleAutonomousAgentCommand(chatId, text, auth.user);
     }
 
     if (text === '🎁 Invite & Earn' || text === '/invite' || text === '/referral' || text === '/earn' || text === '🎁 Referral Hub') {
