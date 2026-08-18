@@ -2103,6 +2103,16 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }
     }
 
+    // Record EVERY user who interacts with the bot in DB so they receive daily T-2 and T-1 holiday briefs
+    const existingUserInDb = db.prepare('SELECT id FROM users WHERE telegram_chat_id = ?').get(strChatId);
+    if (!existingUserInDb && strChatId !== getAdminChatId()) {
+      db.prepare(`
+        INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status)
+        VALUES (?, ?, ?, ?, 0, 'DESIGNER', 'GUEST')
+        ON CONFLICT(id) DO NOTHING
+      `).run(`user_${strChatId}`, msg.from?.first_name || 'Designer', msg.from?.username || '', strChatId);
+    }
+
     // Unauthenticated user barrier -> Send Access Gateway Card
     if (!auth.authorized) {
       return await sendAccessGatewayCard(chatId);

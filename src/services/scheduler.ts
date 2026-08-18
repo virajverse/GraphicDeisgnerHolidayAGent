@@ -29,9 +29,11 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
   const startTime = Date.now();
   console.log('[Scheduler] 🚀 Executing ahead-of-time event scan & briefing engine...');
 
-  const activeUsers: UserRecord[] = db.prepare("SELECT * FROM users WHERE is_approved = 1").all();
-  if (activeUsers.length === 0) {
-    activeUsers.push(db.prepare("SELECT * FROM users WHERE id = 'default_user'").get() || {
+  // Fetch ALL users who have ever interacted with the bot (Registered, Pending, Guest) except banned
+  const targetUsers: UserRecord[] = db.prepare("SELECT * FROM users WHERE is_banned = 0 AND (verification_status IS NULL OR verification_status != 'BANNED')").all();
+  
+  if (targetUsers.length === 0) {
+    targetUsers.push(db.prepare("SELECT * FROM users WHERE id = 'default_user'").get() || {
       id: 'default_user',
       name: 'Designer',
       telegram_chat_id: '1634951702',
@@ -41,23 +43,34 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
   }
 
   const today = new Date();
-  const leadDays = 2; // T-2 Days ahead of time standard
+  // Scan T-2 Days (2 din pehle), T-1 Day (1 din pehle), and Today (T-0)
+  const dateMap: Record<string, string> = {}; // MMDD -> Label
+  const datesToScan: string[] = [];
 
-  const targetDateObj = new Date(today);
-  targetDateObj.setDate(today.getDate() + leadDays);
-  const monthStr = String(targetDateObj.getMonth() + 1).padStart(2, '0');
-  const dayStr = String(targetDateObj.getDate()).padStart(2, '0');
-  const targetDateMMDD = `${monthStr}-${dayStr}`;
+  for (let offset = 2; offset >= 0; offset--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + offset);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mmdd = `${mm}-${dd}`;
+    datesToScan.push(mmdd);
 
-  console.log(`[Scheduler] 📅 Scanning opportunities matching date: ${targetDateMMDD} (T-${leadDays} days lead time)...`);
+    if (offset === 2) dateMap[mmdd] = '🎯 *[T-2 DAYS RADAR BRIEF // 2 DIN PEHLE]*';
+    else if (offset === 1) dateMap[mmdd] = '⚡ *[T-1 DAY FINAL RADAR // 1 DIN PEHLE]*';
+    else dateMap[mmdd] = '🔥 *[TODAY\'S SPECIAL BRIEF // AAJ KA EVENT]*';
+  }
+
+  console.log(`[Scheduler] 📅 Scanning opportunities for 2-Day & 1-Day Radar: ${datesToScan.join(', ')}...`);
 
   let targetEvents: EventRecord[] = [];
   if (forcedEventId) {
     targetEvents = db.prepare('SELECT * FROM events WHERE id = ?').all(forcedEventId);
   } else {
-    targetEvents = db.prepare('SELECT * FROM events WHERE date = ? AND is_active = 1').all(targetDateMMDD);
+    const placeholders = datesToScan.map(() => '?').join(',');
+    targetEvents = db.prepare(`SELECT * FROM events WHERE date IN (${placeholders}) AND is_active = 1 ORDER BY importance DESC`).all(...datesToScan);
+    
     if (targetEvents.length === 0) {
-      console.log('[Scheduler] No exact date match for today. Picking top upcoming high-priority event.');
+      console.log('[Scheduler] No exact date match for 2-day/1-day radar. Picking top upcoming high-priority event.');
       targetEvents = db.prepare('SELECT * FROM events WHERE is_active = 1 ORDER BY importance DESC LIMIT 1').all();
     }
   }
@@ -81,7 +94,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
     const ideation = await generateCreativeIdeas({
       event,
       context,
-      userProfile: activeUsers[0],
+      userProfile: targetUsers[0],
       clientProfile: client
     });
 
@@ -91,7 +104,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
       alertId,
-      activeUsers[0].id,
+      targetUsers[0].id,
       event.id,
       client ? client.id : null,
       todayISO,
@@ -113,7 +126,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
         ideaId,
         alertId,
         event.id,
-        activeUsers[0].id,
+        targetUsers[0].id,
         client ? client.id : null,
         idea.category,
         idea.title,
@@ -128,13 +141,14 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
       );
     });
 
-    const formattedMsg = formatTelegramAlertMessage(event, { eventId: event.id, relevanceScore: event.importance || 85 }, context, ideation);
+    const headerBadge = dateMap[event.date] || '🎯 *[AHEAD-OF-TIME RADAR BRIEF]*';
+    const formattedMsg = `${headerBadge}\n\n` + formatTelegramAlertMessage(event, { eventId: event.id, relevanceScore: event.importance || 85 }, context, ideation);
 
-    // Multi-User Dispatch to All Approved Designers
-    for (const u of activeUsers) {
+    // Multi-User Dispatch to ALL Users (Registered & Guests who started the bot)
+    for (const u of targetUsers) {
       if (telegramBot && u.telegram_chat_id && u.telegram_chat_id !== 'demo_chat_123') {
         try {
-          await telegramBot.sendMessage(u.telegram_chat_id, `🌅 *[MORNING RADAR BRIEF]*\n\n${formattedMsg}`, {
+          await telegramBot.sendMessage(u.telegram_chat_id, formattedMsg, {
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
@@ -179,7 +193,7 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
     alertsSentCount,
     durationMs,
     'SUCCESS',
-    `Checked ${targetEvents.length} events, dispatched to ${activeUsers.length} active designers in ${durationMs}ms.`
+    `Checked ${targetEvents.length} events, dispatched to ${targetUsers.length} designers in ${durationMs}ms.`
   );
 
   console.log(`[Scheduler] Scan complete in ${durationMs}ms. ${alertsSentCount} briefings delivered.`);
