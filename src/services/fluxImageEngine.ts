@@ -14,7 +14,7 @@ export interface ImageGenResult {
 }
 
 /**
- * 🎨 Generates an ultra-crisp, zero-text 3D visual design asset via NVIDIA FLUX.2 Klein 4B
+ * 🎨 Generates an ultra-crisp, zero-text 3D visual design asset via FLUX.2 Studio Engine
  */
 export async function generateDesignerPosterImage(
   subject: string,
@@ -28,7 +28,7 @@ export async function generateDesignerPosterImage(
     return {
       success: false,
       durationMs: 0,
-      errorMessage: 'NVIDIA API key not configured in environment.'
+      errorMessage: 'AI API key not configured in environment.'
     };
   }
 

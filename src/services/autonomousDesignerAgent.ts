@@ -108,7 +108,7 @@ export const AGENT_TOOLS = {
   },
 
   /**
-   * Tool: Render Ultra-Crisp Zero-Text 3D Visual Asset via NVIDIA FLUX.2 Klein 4B
+   * Tool: Render Ultra-Crisp Zero-Text 3D Visual Asset via FLUX.2 Studio Engine
    */
   async tool_render_3d_asset(craftedPrompt: string) {
     return await generateDesignerPosterImage(craftedPrompt);

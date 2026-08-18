@@ -5,13 +5,13 @@ import { ModelClusterType } from '../types/models.js';
 let nvidiaClientInstance: OpenAI | null = null;
 
 /**
- * Initialize or return singleton NVIDIA NIM API Client (OpenAI-compatible)
+ * Initialize or return singleton AI Mesh Client (OpenAI-compatible)
  */
 export function getNvidiaClient(): OpenAI {
   if (!nvidiaClientInstance) {
-    const apiKey = process.env.NVIDIA_API_KEY;
+    const apiKey = process.env.NVIDIA_API_KEY || process.env.NVIDIA_NIM_API_KEY;
     if (!apiKey) {
-      throw new Error('[ClusterModelRouter] ❌ CRITICAL: NVIDIA_API_KEY is not configured in process.env / environment variables!');
+      throw new Error('[ClusterModelRouter] ❌ CRITICAL: AI API Key is not configured in process.env / environment variables!');
     }
     nvidiaClientInstance = new OpenAI({
       apiKey: apiKey,
@@ -27,7 +27,7 @@ export function getNvidiaClient(): OpenAI {
 export const getOpenAIClient = getNvidiaClient;
 
 /**
- * Verify live connection to NVIDIA NIM Cloud
+ * Verify live connection to AI Mesh Cloud
  */
 export async function verifyNvidiaConnection(): Promise<boolean> {
   try {
@@ -39,7 +39,7 @@ export async function verifyNvidiaConnection(): Promise<boolean> {
     });
     return !!res.choices?.[0]?.message?.content;
   } catch (err: any) {
-    console.warn(`[Nvidia Connection Probe]: ${err.message}`);
+    console.warn(`[Neural Mesh Probe]: ${err.message}`);
     return false;
   }
 }

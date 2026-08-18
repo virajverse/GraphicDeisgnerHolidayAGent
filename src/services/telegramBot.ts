@@ -1504,7 +1504,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
       const activityText = `👤 *YOUR CREATIVE AGENT ACTIVITY*\n\n` +
         `• *Role:* Senior Graphic Designer\n` +
         `• *Saved Briefings:* Active & Synchronized\n` +
-        `• *NVIDIA Cluster:* 27 Models Online\n\n` +
+        `• *AI Neural Cluster:* 27 Models Online\n\n` +
         `💬 *Tap any upcoming event or send a prompt to generate 6 ideas!*`;
       return await sendSafeTelegramMessage(chatId, activityText, { reply_markup: DESIGNER_INLINE_HUB });
     } else if (data === 'cmd_lang') {

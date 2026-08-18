@@ -94,8 +94,8 @@ async function runFullAudit() {
   const context = await fetchRealWorldContext(testEvent);
   check('Context Engine', 'Real-World News & Trend Scraping', Boolean(context.summary && context.opportunityHint), `Summary length: ${context.summary.length} chars`);
 
-  // 4. NVIDIA NIM 27-MODEL CLUSTER ROUTER
-  console.log('\n🧠 STEP 4: Verifying NVIDIA AI Cluster Inference...');
+  // 4. AI NEURAL MESH 27-MODEL CLUSTER ROUTER
+  console.log('\n🧠 STEP 4: Verifying Strategic AI Cluster Inference...');
   try {
     const aiRes = await executeClusterQuery(
       'DEEP_STRATEGY',
