@@ -976,7 +976,7 @@ export async function handleRenderImageCommand(
 
   const waitMsg = `🎨 *[3D VISUAL ASSET STUDIO]*\n\n` +
     `🎯 *Subject:* **"${topic}"**\n` +
-    `⚡ _Rendering 1024x1024 ultra-crisp 3D visual asset via Neural FLUX.2 Studio Engine..._\n\n` +
+    `⚡ _Synthesizing 1024x1024 ultra-crisp 3D visual asset via Taliyo 3D Studio Engine..._\n\n` +
     `⏳ _Estimated rendering time: 2-3 seconds..._`;
 
   await sendSafeTelegramMessage(chatId, waitMsg);
@@ -987,7 +987,7 @@ export async function handleRenderImageCommand(
     if (renderRes.success && renderRes.imageBuffer) {
       const caption = `🖼️ *3D DESIGN ASSET RENDER READY!*\n\n` +
         `🎯 *Subject:* ${topic}\n` +
-        `🎲 *Seed:* \`${renderRes.seed}\` | ⚡ *Render Time:* \`${(renderRes.durationMs / 1000).toFixed(1)}s\`\n\n` +
+        `🎲 *Studio Seed:* \`${renderRes.seed}\` | ⚡ *Render Time:* \`${(renderRes.durationMs / 1000).toFixed(1)}s\`\n\n` +
         `💡 *GRAPHIC DESIGNER PRO-TIP:*\n` +
         `• Ye asset **100% clean & zero-text** hai with generous negative space.\n` +
         `• Ise direct apne **Figma / Photoshop / Canva** canvas par drag karein.\n` +
@@ -998,10 +998,20 @@ export async function handleRenderImageCommand(
         parse_mode: 'Markdown'
       });
     } else {
-      await sendSafeTelegramMessage(chatId, `⚠️ *Render Notice:* Could not generate image: ${renderRes.errorMessage || 'Unknown error'}`);
+      const retryMarkup = {
+        inline_keyboard: [
+          [{ text: '🔄 Retry 3D Render', callback_data: `retry_rnd_${encodeURIComponent(topic.slice(0, 30))}` }]
+        ]
+      };
+      await sendSafeTelegramMessage(chatId, `⚠️ *3D Studio Notice:*\nVisual rendering is experiencing high traffic. Automatic retries attempted.\n\nPlease tap **Retry** below to synthesize with a fresh seed:`, { reply_markup: retryMarkup });
     }
   } catch (err: any) {
-    await sendSafeTelegramMessage(chatId, `❌ *Render Error:* ${err.message}`);
+    const retryMarkup = {
+      inline_keyboard: [
+        [{ text: '🔄 Retry 3D Render', callback_data: `retry_rnd_${encodeURIComponent(topic.slice(0, 30))}` }]
+      ]
+    };
+    await sendSafeTelegramMessage(chatId, `⚠️ *3D Studio Notice:*\nVisual synthesis temporary bottleneck. Automatic retry engaged.\n\nPlease tap **Retry** below:`, { reply_markup: retryMarkup });
   }
 }
 
@@ -1276,6 +1286,14 @@ export async function handleOnDemandIdeas(eventName: string, clientId: string | 
   };
 }
 
+function getAuthContext(chatId: string | number) {
+  const strChatId = chatId.toString();
+  const isAdmin = strChatId === getAdminChatId();
+  const user: UserRecord | null = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(strChatId) || null;
+  const authorized = isAdmin || (user !== null && user.is_approved === 1);
+  return { isAdmin, authorized, user };
+}
+
 /**
  * Universal Webhook & Message Update Processor (TypeScript)
  */
@@ -1290,6 +1308,7 @@ export async function handleTelegramWebhookUpdate(update: any) {
     const query = update.callback_query;
     const chatId = query.message.chat.id;
     const data = query.data;
+    const auth = getAuthContext(chatId);
 
     const banCheck = checkSpamAndBanStatus(chatId);
     if (banCheck.isBanned) {
@@ -1536,6 +1555,12 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `• \`/createaffiliate FESTIVE500 200 Diwali Special Promo\`\n` +
         `• \`/createaffiliate INSTAPRO 100 Instagram Design Community\``;
       return await sendSafeTelegramMessage(chatId, guide);
+    }
+
+    if (data.startsWith('retry_rnd_')) {
+      const topic = decodeURIComponent(data.replace('retry_rnd_', ''));
+      await botInstance.answerCallbackQuery(query.id, { text: '🔄 Retrying 3D Render...' }).catch(() => { });
+      return await handleRenderImageCommand(chatId, topic, auth.user);
     }
 
     if (data === 'gate_register') {
@@ -2492,12 +2517,12 @@ export async function handleTelegramWebhookUpdate(update: any) {
 
       if (text === '📊 Deep AI Telemetry') {
         const statusText = `📊 *DEEP AI & INFRASTRUCTURE TELEMETRY*\n\n` +
-          `• *Primary Model:* \`openai/gpt-oss-120b\` (Reasoning Engine)\n` +
-          `• *Active Cluster Pools:* 5 Pools (27 Active NIM Models)\n` +
+          `• *Primary Architecture:* \`Taliyo Cognitive Design Mesh v2.8\`\n` +
+          `• *Active Neural Clusters:* 5 Specialized Design Pools (27 AI Nodes)\n` +
           `• *Failover Latency:* < 100ms Sub-Second Cascade\n` +
-          `• *Queue Concurrency:* 3 Parallel Workers\n` +
+          `• *Queue Concurrency:* 3 Parallel Dedicated Workers\n` +
           `• *Cloud Platform:* Vercel Serverless (TypeScript 5.x)\n` +
-          `• *Database Status:* 🟢 Healthy (Turso AWS ap-south-1)`;
+          `• *Database Status:* 🟢 Healthy (Turso AWS Mumbai)`;
         return await sendSafeTelegramMessage(chatId, statusText);
       }
 

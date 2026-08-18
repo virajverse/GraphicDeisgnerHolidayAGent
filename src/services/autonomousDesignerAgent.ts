@@ -149,7 +149,7 @@ Return JSON ONLY:
   "targetTopic": "Extracted Festival, Occasion, or Subject Name",
   "targetIndustry": "Tech / Real Estate / Luxury / D2C / General",
   "targetMood": "Minimalist / Luxury / Bold 3D / Emotional",
-  "crafted3DPrompt": "Optimized physical 3D prompt for FLUX: focal 3D object, realistic materials, studio rim lighting, dark obsidian background, clean negative space, no text, 8k render",
+  "crafted3DPrompt": "Optimized physical 3D prompt: focal 3D object, realistic materials, studio rim lighting, dark obsidian background, clean negative space, no text, 8k render",
   "directAnswer": "Crisp master-class design answer if actionType is DIRECT_DESIGN_CO_PILOT, otherwise empty"
 }
 `;
@@ -202,7 +202,7 @@ Return JSON ONLY:
     };
   }
 
-  // Action: GENERATE_VISUAL_RENDER (Agent understands user intent -> crafts prompt -> invokes FLUX)
+  // Action: GENERATE_VISUAL_RENDER (Agent understands user intent -> crafts prompt -> invokes 3D Studio)
   if (perception.actionType === 'GENERATE_VISUAL_RENDER') {
     const renderStart = Date.now();
     const cleanPrompt = perception.crafted3DPrompt || perception.targetTopic;
@@ -210,10 +210,10 @@ Return JSON ONLY:
 
     thoughtTrace.push({
       stepNumber: stepIndex++,
-      thought: `Agent understood visual design intent. Crafted optimized FLUX 3D prompt: "${cleanPrompt}"`,
+      thought: `Agent understood visual design intent. Crafted optimized 3D studio prompt: "${cleanPrompt}"`,
       actionName: 'tool_render_3d_asset',
       actionInput: { prompt: cleanPrompt },
-      observation: renderRes.success ? `Rendered 1024x1024 3D asset in ${renderRes.durationMs}ms` : `Render error: ${renderRes.errorMessage}`,
+      observation: renderRes.success ? `Rendered 1024x1024 3D asset in ${renderRes.durationMs}ms` : `Render notice: ${renderRes.errorMessage}`,
       durationMs: Date.now() - renderStart
     });
 
