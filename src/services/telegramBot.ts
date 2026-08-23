@@ -451,15 +451,15 @@ export function formatTelegramAlertPart1(
   ideation: IdeationResult
 ): string {
   const { ideas } = ideation;
-  let msg = `✨ *CREATIVE RADAR BRIEFING* [Part 1/2]\n\n`;
+  let msg = `🚨 *[GRAPHIC DESIGN CONCEPTS // 3 CONCEPTS (PART 1/2)]*\n\n`;
   if (ideation.conversational_intro) {
     msg += `💬 _"${ideation.conversational_intro}"_\n\n`;
   }
-  msg += `📅 *Occasion:* ${event.name} (${event.date})\n\n`;
+  msg += `🎯 *Target Occasion:* **${event.name}** (${event.date})\n\n`;
   msg += `🌐 *WHAT'S HAPPENING IN THE REAL WORLD:*\n_${context.summary}_\n\n`;
   msg += `💡 *Creative Angle for Designers:*\n${context.opportunityHint}\n\n`;
 
-  msg += `🎨 *READY-TO-DESIGN CONCEPTS (#01 - #03):*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  msg += `🎨 *3 READY-TO-DESIGN CONCEPTS (#01 - #03):*\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   const firstThree = ideas.slice(0, 3);
   firstThree.forEach((idea, idx) => {
     const num = idx + 1;
@@ -471,6 +471,7 @@ export function formatTelegramAlertPart1(
     msg += `• *Best Format:* ${idea.platform}\n\n`;
   });
 
+  msg += `👇 _Tap **[➕ Agle 3 Concepts Dekhein]** button below for Concepts #04 - #06 & Strategy!_`;
   return msg;
 }
 
@@ -1021,7 +1022,7 @@ export async function handleRenderImageCommand(
   }
 }
 
-function getDaysRemaining(eventDateMMDD: string): number {
+export function getDaysRemaining(eventDateMMDD: string): number {
   if (!eventDateMMDD || !eventDateMMDD.includes('-')) return 999;
   const [mStr, dStr] = eventDateMMDD.split('-');
   const eventMonth = parseInt(mStr, 10) - 1;
@@ -1041,6 +1042,16 @@ function getDaysRemaining(eventDateMMDD: string): number {
   }
 
   return daysDiff;
+}
+
+export function getClosestUpcomingEvents(limit: number = 4): Array<EventRecord & { daysRemaining: number }> {
+  const events: EventRecord[] = db.prepare('SELECT * FROM events WHERE is_active = 1').all();
+  const withDays = events.map(e => ({
+    ...e,
+    daysRemaining: getDaysRemaining(e.date)
+  }));
+  withDays.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  return withDays.slice(0, limit);
 }
 
 export async function processAgentDesignRequest(chatId: string | number, queryText: string, user: UserRecord | null = null) {
@@ -1116,62 +1127,90 @@ export async function processAgentDesignRequest(chatId: string | number, queryTe
 
     const ideation = await generateCreativeIdeas({ event, context, userProfile, clientProfile: client });
 
-    const alertData = {
-      eventId: event.id,
-      relevanceScore: event.importance || 85
-    };
+    const alertId = `alt_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const todayISO = new Date().toISOString().split('T')[0];
 
-    const formattedMessage = formatTelegramAlertMessage(event, alertData, context, ideation);
+    try {
+      db.prepare(`
+        INSERT INTO alerts (id, user_id, event_id, client_id, trigger_date, relevance_score, real_world_context, sources_json, recommended_ideas, status, generated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).run(
+        alertId,
+        userProfile?.id || 'default_user',
+        event.id,
+        client ? client.id : null,
+        todayISO,
+        event.importance || 85,
+        context.summary,
+        JSON.stringify(context.sources || []),
+        JSON.stringify(ideation.recommendation),
+        'GENERATED'
+      );
+
+      const insertIdeaStmt = db.prepare(`
+        INSERT INTO creative_ideas (id, alert_id, event_id, user_id, client_id, category, title, concept, visual_direction, headline, platform, audience, difficulty, priority, reasoning)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      ideation.ideas.forEach((idea, idx) => {
+        const ideaId = `idea_${alertId}_${idx + 1}`;
+        insertIdeaStmt.run(
+          ideaId,
+          alertId,
+          event.id,
+          userProfile?.id || 'default_user',
+          client ? client.id : null,
+          idea.category,
+          idea.title,
+          idea.concept,
+          idea.visual_direction,
+          idea.headline,
+          idea.platform,
+          idea.audience || 'General',
+          idea.difficulty || 'Medium',
+          idx + 1,
+          idea.why_it_works || ''
+        );
+      });
+    } catch (e: any) {
+      console.warn(`[DB Cache Warning]: ${e.message}`);
+    }
+
+    const part1 = formatTelegramAlertPart1(event, context, ideation);
 
     const inlineKeyboard = {
       inline_keyboard: [
         [
+          { text: '➕ Agle 3 Concepts (#04 - #06) Dekhein ➔', callback_data: `more3_${alertId}` }
+        ],
+        [
           { text: '🎨 Visual Specs (Colors & Fonts)', callback_data: `specs_${event.id}` },
+          { text: '🖼️ 3D Image Banao', callback_data: `rnd_img_${encodeURIComponent(event.name.slice(0, 20))}` }
+        ],
+        [
+          { text: '🔄 Naye Ideas', callback_data: `gen_evt_${event.name}` },
           { text: '⭐ Save Briefing', callback_data: `fb_save_${event.id}` }
         ],
         [
-          { text: '🔄 New Ideas', callback_data: `gen_evt_${event.name}` },
           { text: '👍 Useful', callback_data: `fb_like_${event.id}` },
           { text: '👎 Dislike', callback_data: `fb_dislike_${event.id}` }
         ]
       ]
     };
 
-    if (formattedMessage.length <= 3800) {
-      try {
-        await botInstance.editMessageText(formattedMessage, {
-          chat_id: chatId,
-          message_id: progressMsg.message_id,
-          parse_mode: 'Markdown',
-          reply_markup: inlineKeyboard
-        });
-      } catch (err: any) {
-        const plainText = formattedMessage.replace(/[*_`[\]()]/g, '');
-        await botInstance.editMessageText(plainText, {
-          chat_id: chatId,
-          message_id: progressMsg.message_id,
-          reply_markup: inlineKeyboard
-        }).catch(() => { });
-      }
-    } else {
-      // Split into 2 clean messages to never hit Telegram's 4096 character limit
-      const part1 = formatTelegramAlertPart1(event, context, ideation);
-      const part2 = formatTelegramAlertPart2(event, ideation);
-
-      try {
-        await botInstance.editMessageText(part1, {
-          chat_id: chatId,
-          message_id: progressMsg.message_id,
-          parse_mode: 'Markdown'
-        });
-      } catch {
-        await botInstance.editMessageText(part1.replace(/[*_`[\]()]/g, ''), {
-          chat_id: chatId,
-          message_id: progressMsg.message_id
-        }).catch(() => { });
-      }
-
-      await sendSafeTelegramMessage(chatId, part2, { reply_markup: inlineKeyboard });
+    try {
+      await botInstance.editMessageText(part1, {
+        chat_id: chatId,
+        message_id: progressMsg.message_id,
+        parse_mode: 'Markdown',
+        reply_markup: inlineKeyboard
+      });
+    } catch {
+      await botInstance.editMessageText(part1.replace(/[*_`[\]()]/g, ''), {
+        chat_id: chatId,
+        message_id: progressMsg.message_id,
+        reply_markup: inlineKeyboard
+      }).catch(() => { });
     }
 
   } catch (err: any) {
@@ -1250,10 +1289,10 @@ export function handleUpcomingCommand(): string {
 }
 
 export async function handleTodayCommand(): Promise<string> {
-  const todayEvt: EventRecord = db.prepare("SELECT * FROM events WHERE date = '08-15' LIMIT 1").get() ||
-    db.prepare('SELECT * FROM events LIMIT 1').get();
+  const closestEvents = getClosestUpcomingEvents(1);
+  const todayEvt: EventRecord | null = closestEvents.length > 0 ? closestEvents[0] : null;
 
-  if (!todayEvt) return "No major event scheduled for today.";
+  if (!todayEvt) return "No major event scheduled in the upcoming calendar.";
   const res = await handleOnDemandIdeas(todayEvt.name);
   return res.formattedMessage;
 }
@@ -1461,9 +1500,59 @@ export async function handleTelegramWebhookUpdate(update: any) {
         `2️⃣ *Visual Specs:* Get exact Hex Colors & Font Pairings with 1 tap.\n` +
         `3️⃣ *Client Isolation:* Every designer's brand guidelines stay private.`;
       return await sendSafeTelegramMessage(chatId, helpMsg);
+    } else if (data.startsWith('brief3_')) {
+      const evtName = data.replace('brief3_', '');
+      await botInstance.answerCallbackQuery(query.id, { text: `🎨 Generating 3 concepts for ${evtName}...` }).catch(() => { });
+      const userRec: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId.toString()) || { id: 'default_user', name: 'Designer', telegram_chat_id: chatId.toString(), is_approved: 1, role: 'DESIGNER' };
+      return await processAgentDesignRequest(chatId, evtName, userRec);
+    } else if (data.startsWith('more3_')) {
+      const alertId = data.replace('more3_', '');
+      await botInstance.answerCallbackQuery(query.id, { text: '🎨 Loading Next 3 Concepts...' }).catch(() => { });
+
+      const alert: AlertRecord = db.prepare('SELECT * FROM alerts WHERE id = ?').get(alertId);
+      const ideas: CreativeIdeaRecord[] = db.prepare('SELECT * FROM creative_ideas WHERE alert_id = ? ORDER BY priority ASC').all(alertId);
+      const event: EventRecord = (alert ? db.prepare('SELECT * FROM events WHERE id = ?').get(alert.event_id) : null) || { id: 'evt_gen', name: 'Marketing Occasion', date: 'Upcoming', category: 'FESTIVAL', importance: 85 };
+
+      if (ideas && ideas.length >= 4) {
+        let msg = `🎨 *NEXT 3 READY-TO-DESIGN CONCEPTS (#04 - #06):* [Part 2/2]\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        const nextThree = ideas.slice(3, 6);
+        nextThree.forEach((idea, idx) => {
+          const num = idx + 4;
+          const cat = idea.category || 'Concept';
+          msg += `*#0${num} [${cat.toUpperCase()}]* ➔ *${idea.title}*\n`;
+          msg += `• *Concept:* ${idea.concept}\n`;
+          msg += `• *Visual Direction:* ${idea.visual_direction}\n`;
+          msg += `• *Headline:* _"${idea.headline}"_\n`;
+          msg += `• *Best Format:* ${idea.platform}\n\n`;
+        });
+
+        const recObj = alert.recommended_ideas ? JSON.parse(alert.recommended_ideas) : {};
+        msg += `⭐ *TOP STRATEGIC RECOMMENDATION:*\n`;
+        msg += `${recObj.avoid_note || 'Strongest engagement potential for social media.'}\n\n`;
+        msg += `📱 *Target Platforms:* ${recObj.recommended_platforms || 'Instagram Carousel + LinkedIn'}\n`;
+        msg += `🎯 *Target Audience:* ${recObj.target_audience || 'General / Modern Digital Audience'}\n`;
+
+        const keyboard = {
+          inline_keyboard: [
+            [
+              { text: '🎨 Visual Specs (Colors & Fonts)', callback_data: `specs_${event.id || 'default'}` },
+              { text: '🖼️ 3D Image Banao', callback_data: `rnd_img_${encodeURIComponent(event.name.slice(0, 20))}` }
+            ],
+            [
+              { text: '🔄 Naye Ideas', callback_data: `gen_evt_${event.name}` },
+              { text: '⭐ Save Briefing', callback_data: `fb_save_${event.id || 'default'}` }
+            ]
+          ]
+        };
+
+        return await sendSafeTelegramMessage(chatId, msg, { reply_markup: keyboard });
+      } else {
+        const userRec: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId.toString()) || { id: 'default_user', name: 'Designer', telegram_chat_id: chatId.toString(), is_approved: 1, role: 'DESIGNER' };
+        return await processAgentDesignRequest(chatId, event.name, userRec);
+      }
     } else if (data.startsWith('gen_evt_')) {
       const evtName = data.replace('gen_evt_', '');
-      await botInstance.answerCallbackQuery(query.id, { text: `🎨 Generating 6 ideas for ${evtName}...` }).catch(() => { });
+      await botInstance.answerCallbackQuery(query.id, { text: `🎨 Generating ideas for ${evtName}...` }).catch(() => { });
       return await processAgentDesignRequest(chatId, evtName, { id: 'default_user', name: 'Designer', telegram_chat_id: chatId.toString(), is_approved: 1, role: 'DESIGNER' });
     } else if (data.startsWith('specs_')) {
       await botInstance.answerCallbackQuery(query.id, { text: '🎨 Generating Visual Specs...' }).catch(() => { });
@@ -2513,12 +2602,31 @@ export async function handleTelegramWebhookUpdate(update: any) {
       }
 
       if (text === '🚀 Trigger Radar Scan') {
-        await sendSafeTelegramMessage(chatId, `🚀 *[Admin Trigger]* Executing morning calendar radar scan & AI briefings...`);
-        const todayEvt = db.prepare('SELECT * FROM events ORDER BY importance DESC LIMIT 1').get();
-        if (todayEvt) {
-          await processAgentDesignRequest(chatId, todayEvt.name, auth.user);
+        const upcomingList = getClosestUpcomingEvents(4);
+        if (upcomingList.length === 0) {
+          return await sendSafeTelegramMessage(chatId, `📅 *Calendar Status:* No upcoming events found in database.`);
         }
-        return;
+
+        let textMsg = `🚀 *[ADMIN RADAR SCAN // UPCOMING MARKETING OCCASIONS]*\n\nActive upcoming occasions scan complete:\n\n`;
+        const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+
+        upcomingList.forEach((e, idx) => {
+          const flag = e.country === 'India' ? '🇮🇳' : '🌍';
+          const cd = e.daysRemaining === 0 ? '🔥 TODAY' : e.daysRemaining === 1 ? '⚡ Tomorrow' : `In ${e.daysRemaining} days`;
+          textMsg += `*${idx + 1}. ${flag} ${e.name}* — \`${e.date}\` (_${cd}_) [${e.category}]\n`;
+          buttons.push([
+            { text: `🎨 ${e.name} ke 3 Concepts lo (${cd})`, callback_data: `brief3_${e.name}` }
+          ]);
+        });
+
+        textMsg += `\n💡 *Kiske liye 3 design concepts generate karne hain?*\nUpar diye gaye button par tap karein:`;
+        buttons.push([
+          { text: '🗓️ Poora 30-Day Calendar', callback_data: 'cal_all' }
+        ]);
+
+        return await sendSafeTelegramMessage(chatId, textMsg, {
+          reply_markup: { inline_keyboard: buttons }
+        });
       }
 
       if (text === '📊 Deep AI Telemetry') {
@@ -2667,20 +2775,38 @@ export async function handleTelegramWebhookUpdate(update: any) {
     }
 
     if (text === '/today' || text === '/autobrief' || text === '⚡ Auto Radar Brief' || text === '⚡ Today\'s Focus') {
-      const topEvt: EventRecord = db.prepare('SELECT * FROM events ORDER BY importance DESC LIMIT 1').get() || {
-        id: 'evt_default',
-        name: 'Independence Day India',
-        date: '08-15',
-        category: 'NATIONAL',
-        importance: 95
-      };
-      const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
-      const alertNotice = isEnglish
-        ? `🎯 *[AHEAD-OF-TIME RADAR BRIEF]*\n\nHey ${auth.user?.name || 'Designer'}! Upcoming in the next 2-3 days: *${topEvt.name}*. Get your client campaigns ready!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`
-        : `🎯 *[AHEAD-OF-TIME AUTO RADAR]*\n\nHey ${auth.user?.name || 'Designer'}! Next 2-3 dino me *${topEvt.name}* aa raha hai. Apne clients ke liye yeh design bana lo!\n\n_Generating 6 creative concepts, headlines & visual specs now..._`;
+      const upcomingList = getClosestUpcomingEvents(4);
+      if (upcomingList.length === 0) {
+        return await sendSafeTelegramMessage(chatId, `📅 *Calendar Status:* No upcoming events found in database. Please add events using \`/addevent\` or through the Admin Dashboard.`);
+      }
 
-      await sendSafeTelegramMessage(chatId, alertNotice);
-      return await processAgentDesignRequest(chatId, topEvt.name, auth.user);
+      const isEnglish = (auth.user?.language || 'HINGLISH').toUpperCase() === 'ENGLISH';
+      let textMsg = isEnglish
+        ? `🎯 *[AHEAD-OF-TIME MARKETING RADAR // UPCOMING OCCASIONS]*\n\nHey ${auth.user?.name || 'Designer'}! Here are the upcoming occasions you should plan designs for:\n\n`
+        : `🎯 *[AHEAD-OF-TIME MARKETING RADAR // AANE WALE OCCASIONS]*\n\nHey ${auth.user?.name || 'Designer'}! Agle kuch dino me ye marketing occasions aa rahe hain jinke liye client designs plan karne hain:\n\n`;
+
+      const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+
+      upcomingList.forEach((e, idx) => {
+        const flag = e.country === 'India' ? '🇮🇳' : '🌍';
+        const cd = e.daysRemaining === 0 ? '🔥 TODAY' : e.daysRemaining === 1 ? '⚡ Tomorrow' : `In ${e.daysRemaining} days`;
+        textMsg += `*${idx + 1}. ${flag} ${e.name}* — \`${e.date}\` (_${cd}_) [${e.category}]\n`;
+        buttons.push([
+          { text: `🎨 ${e.name} ke 3 Concepts lo (${cd})`, callback_data: `brief3_${e.name}` }
+        ]);
+      });
+
+      textMsg += isEnglish
+        ? `\n💡 *Which occasion do you want creative concepts for?*\nTap any button below or type an event name in chat!`
+        : `\n💡 *Aapko kiske liye design brief & concepts chahiye?*\nNiche diye gaye button par tap karein ya chat me event ka naam likhein!`;
+
+      buttons.push([
+        { text: '🗓️ Poora 30-Day Calendar Dekhein', callback_data: 'cal_all' }
+      ]);
+
+      return await sendSafeTelegramMessage(chatId, textMsg, {
+        reply_markup: { inline_keyboard: buttons }
+      });
     }
 
     if (text === '💡 Custom Prompt' || text === '💡 Generate Ideas') {

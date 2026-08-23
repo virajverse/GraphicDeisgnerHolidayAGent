@@ -3,7 +3,7 @@ import db from '../db/database.js';
 import { calculateEventScore } from './relevanceEngine.js';
 import { fetchRealWorldContext } from './contextEngine.js';
 import { generateCreativeIdeas } from './ideationEngine.js';
-import { formatTelegramAlertMessage, getAdminChatId } from './telegramBot.js';
+import { formatTelegramAlertMessage, getAdminChatId, getClosestUpcomingEvents } from './telegramBot.js';
 import { EventRecord, UserRecord, ClientRecord } from '../types/database.js';
 
 /**
@@ -43,166 +43,65 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
       role: 'ADMIN'
     });
   }
-
-  const today = new Date();
-  // Scan T-2 Days (2 din pehle), T-1 Day (1 din pehle), and Today (T-0)
-  const dateMap: Record<string, string> = {}; // MMDD -> Label
-  const datesToScan: string[] = [];
-
-  for (let offset = 2; offset >= 0; offset--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + offset);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mmdd = `${mm}-${dd}`;
-    datesToScan.push(mmdd);
-
-    if (offset === 2) dateMap[mmdd] = '🎯 *[T-2 DAYS RADAR BRIEF // 2 DIN PEHLE]*';
-    else if (offset === 1) dateMap[mmdd] = '⚡ *[T-1 DAY FINAL RADAR // 1 DIN PEHLE]*';
-    else dateMap[mmdd] = '🔥 *[TODAY\'S SPECIAL BRIEF // AAJ KA EVENT]*';
+  const upcomingList = getClosestUpcomingEvents(4);
+  if (upcomingList.length === 0) {
+    console.log('[Scheduler] No upcoming events found in database.');
+    return { success: true, processedCount: 0, alerts: [] };
   }
 
-  console.log(`[Scheduler] 📅 Scanning opportunities for 2-Day & 1-Day Radar: ${datesToScan.join(', ')}...`);
+  let morningMsg = `🌅 *[TALIYO MORNING MARKETING RADAR // AANE WALE OCCASIONS]*\n\n`;
+  morningMsg += `Good Morning! Agle kuch dino me ye marketing occasions aa rahe hain jinke liye client designs plan karne hain:\n\n`;
 
-  let targetEvents: EventRecord[] = [];
-  if (forcedEventId) {
-    targetEvents = db.prepare('SELECT * FROM events WHERE id = ?').all(forcedEventId);
-  } else {
-    const placeholders = datesToScan.map(() => '?').join(',');
-    targetEvents = db.prepare(`SELECT * FROM events WHERE date IN (${placeholders}) AND is_active = 1 ORDER BY importance DESC`).all(...datesToScan);
-    
-    if (targetEvents.length === 0) {
-      console.log('[Scheduler] No exact date match for 2-day/1-day radar. Picking top upcoming high-priority event.');
-      targetEvents = db.prepare('SELECT * FROM events WHERE is_active = 1 ORDER BY importance DESC LIMIT 1').all();
-    }
-  }
+  const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+
+  upcomingList.forEach((e, idx) => {
+    const flag = e.country === 'India' ? '🇮🇳' : '🌍';
+    const cd = e.daysRemaining === 0 ? '🔥 TODAY' : e.daysRemaining === 1 ? '⚡ Tomorrow' : `In ${e.daysRemaining} days`;
+    morningMsg += `*${idx + 1}. ${flag} ${e.name}* — \`${e.date}\` (_${cd}_) [${e.category}]\n`;
+    buttons.push([
+      { text: `🎨 ${e.name} ke 3 Concepts lo (${cd})`, callback_data: `brief3_${e.name}` }
+    ]);
+  });
+
+  morningMsg += `\n💡 *Aapko kis event ke liye design brief & concepts chahiye?*\nUpar button par tap karein ya chat me event ka naam likhein!`;
+  buttons.push([
+    { text: '🗓️ Poora 30-Day Calendar', callback_data: 'cal_all' }
+  ]);
 
   let alertsSentCount = 0;
-  const processedAlerts: any[] = [];
-
-  for (const event of targetEvents) {
-    const clients: ClientRecord[] = db.prepare("SELECT * FROM clients").all();
-    const client = clients.length > 0 ? clients[0] : null;
-
-    const todayISO = new Date().toISOString().split('T')[0];
-    const existingAlert = db.prepare('SELECT id FROM alerts WHERE event_id = ? AND trigger_date = ?').get(event.id, todayISO);
-
-    if (existingAlert && !forcedEventId) {
-      console.log(`[Scheduler] Anti-spam trigger: Briefing for "${event.name}" already generated today. Skipping duplicate.`);
-      continue;
-    }
-
-    const context = await fetchRealWorldContext(event);
-    const ideation = await generateCreativeIdeas({
-      event,
-      context,
-      userProfile: targetUsers[0],
-      clientProfile: client
-    });
-
-    const alertId = `alt_${Date.now()}_${Math.floor(Math.random()*1000)}`;
-    db.prepare(`
-      INSERT INTO alerts (id, user_id, event_id, client_id, trigger_date, relevance_score, real_world_context, sources_json, recommended_ideas, status, generated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).run(
-      alertId,
-      targetUsers[0].id,
-      event.id,
-      client ? client.id : null,
-      todayISO,
-      event.importance || 85,
-      context.summary,
-      JSON.stringify(context.sources || []),
-      JSON.stringify(ideation.recommendation),
-      'GENERATED'
-    );
-
-    const insertIdeaStmt = db.prepare(`
-      INSERT INTO creative_ideas (id, alert_id, event_id, user_id, client_id, category, title, concept, visual_direction, headline, platform, audience, difficulty, priority, reasoning)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    ideation.ideas.forEach((idea, idx) => {
-      const ideaId = `idea_${alertId}_${idx + 1}`;
-      insertIdeaStmt.run(
-        ideaId,
-        alertId,
-        event.id,
-        targetUsers[0].id,
-        client ? client.id : null,
-        idea.category,
-        idea.title,
-        idea.concept,
-        idea.visual_direction,
-        idea.headline,
-        idea.platform,
-        idea.audience || 'General',
-        idea.difficulty || 'Medium',
-        idx + 1,
-        idea.why_it_works || ''
-      );
-    });
-
-    const headerBadge = dateMap[event.date] || '🎯 *[AHEAD-OF-TIME RADAR BRIEF]*';
-    const formattedMsg = `${headerBadge}\n\n` + formatTelegramAlertMessage(event, { eventId: event.id, relevanceScore: event.importance || 85 }, context, ideation);
-
-    // Multi-User Dispatch to ALL Users (Registered & Guests who started the bot)
-    for (const u of targetUsers) {
-      if (telegramBot && u.telegram_chat_id && u.telegram_chat_id !== 'demo_chat_123') {
-        try {
-          await telegramBot.sendMessage(u.telegram_chat_id, formattedMsg, {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: '🎨 Visual Specs (Colors & Fonts)', callback_data: `specs_${event.id}` },
-                  { text: '⭐ Save Briefing', callback_data: `fb_save_${event.id}` }
-                ],
-                [
-                  { text: '🔄 New Ideas', callback_data: `gen_evt_${event.name}` },
-                  { text: '👍 Useful', callback_data: `fb_like_${event.id}` },
-                  { text: '👎 Dislike', callback_data: `fb_dislike_${event.id}` }
-                ]
-              ]
-            }
-          });
-          alertsSentCount++;
-        } catch (err: any) {
-          console.warn(`[Scheduler] Dispatch error for user ${u.telegram_chat_id}: ${err.message}`);
-        }
+  for (const u of targetUsers) {
+    if (telegramBot && u.telegram_chat_id && u.telegram_chat_id !== 'demo_chat_123') {
+      try {
+        await telegramBot.sendMessage(u.telegram_chat_id, morningMsg, {
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard: buttons }
+        });
+        alertsSentCount++;
+      } catch (err: any) {
+        console.warn(`[Scheduler] Dispatch error for user ${u.telegram_chat_id}: ${err.message}`);
       }
     }
-
-    db.prepare("UPDATE alerts SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(alertId);
-
-    processedAlerts.push({
-      alertId,
-      event,
-      context,
-      ideation,
-      formattedMessage: formattedMsg
-    });
   }
 
   const durationMs = Date.now() - startTime;
+  try {
+    db.prepare(`
+      INSERT INTO agent_logs (events_checked, events_found, alerts_sent, duration_ms, status, details)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      upcomingList.length,
+      upcomingList.length,
+      alertsSentCount,
+      durationMs,
+      'SUCCESS',
+      `Checked ${upcomingList.length} upcoming events, dispatched radar card to ${alertsSentCount} designers in ${durationMs}ms.`
+    );
+  } catch (e) { }
 
-  db.prepare(`
-    INSERT INTO agent_logs (events_checked, events_found, alerts_sent, duration_ms, status, details)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(
-    targetEvents.length,
-    processedAlerts.length,
-    alertsSentCount,
-    durationMs,
-    'SUCCESS',
-    `Checked ${targetEvents.length} events, dispatched to ${targetUsers.length} designers in ${durationMs}ms.`
-  );
-
-  console.log(`[Scheduler] Scan complete in ${durationMs}ms. ${alertsSentCount} briefings delivered.`);
+  console.log(`[Scheduler] Scan complete in ${durationMs}ms. ${alertsSentCount} radar cards delivered.`);
   return {
-    eventsChecked: targetEvents.length,
-    alertsGenerated: processedAlerts.length,
-    durationMs,
-    processedAlerts
+    eventsChecked: upcomingList.length,
+    alertsGenerated: alertsSentCount,
+    durationMs
   };
 }
