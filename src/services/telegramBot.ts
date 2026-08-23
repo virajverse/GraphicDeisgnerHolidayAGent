@@ -516,6 +516,9 @@ export function initTelegramBot(token = process.env.TELEGRAM_BOT_TOKEN): Telegra
     console.log(`[TelegramBot] 🤖 Autonomous AI Agent Active (Mode: ${isWebhookMode ? 'Serverless Webhook' : 'Local Polling'})!`);
 
     if (!isWebhookMode) {
+      // Clear any hanging webhook locks from previous serverless deployments so polling receives all messages
+      botInstance.deleteWebHook().catch(() => { });
+
       botInstance.on('message', (msg) => {
         handleTelegramWebhookUpdate({ message: msg }).catch(err => {
           console.error(`[TelegramBot Message Handler Error]: ${err.message}`);

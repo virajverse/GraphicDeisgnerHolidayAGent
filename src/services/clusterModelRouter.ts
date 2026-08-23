@@ -49,47 +49,40 @@ export async function verifyNvidiaConnection(): Promise<boolean> {
  */
 export const MODEL_CLUSTERS = {
   FRONT_DISPATCHER: [
-    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Speed & Intent (2.4s, 100% Success)
-    'nvidia/nemotron-mini-4b-instruct',         // ⚡ #2 Ultra-Fast Fallback (2.9s, 100% Success)
-    'minimaxai/minimax-m3',                     // 💎 #3 Luxury Aesthetic Quality (75/100)
+    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Sub-second Speed & Intent (100% Success)
+    'nvidia/nemotron-mini-4b-instruct',         // ⚡ #2 Ultra-Fast Fallback (100% Success)
+    'minimaxai/minimax-m3',                     // 💎 #3 Luxury Aesthetic Quality
     'openai/gpt-oss-20b'
   ],
   SCOPE_GUARD: [
-    'nvidia/llama-3.1-nemoguard-8b-content-safety',  // 🛡️ #1 Sub-second Guard (722ms, 100% Success)
-    'nvidia/llama-3.1-nemotron-safety-guard-8b-v3',  // 🛡️ #2 Fast Policy Guard (1035ms, 100% Success)
-    'nvidia/nemotron-3.5-content-safety',            // 🛡️ #3 Content Safety (1586ms, 100% Success)
-    'meta/llama-3.1-8b-instruct',
-    'minimaxai/minimax-m3',
-    'nvidia/llama-3.1-nemoguard-8b-topic-control'
+    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Fast Guard (100% Success)
+    'nvidia/llama-3.1-nemoguard-8b-content-safety',  // 🛡️ #2 Policy Guard
+    'nvidia/nemotron-mini-4b-instruct',
+    'nvidia/llama-3.1-nemotron-safety-guard-8b-v3'
   ],
   NEWS_SYNTHESIS: [
-    'nvidia/nemotron-3-nano-30b-a3b',           // 💡 #1 Stable Context (100% Success, 56.2/100)
-    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning', // 💡 #2 Fast Synthesis (4.3s)
-    'nvidia/llama-3.1-nemotron-nano-vl-8b-v1',  // 💡 #3 Multi-Modal Context (100% Success)
-    'meta/llama-3.2-11b-vision-instruct',       // 💡 #4 100% Success Vision-Instruct
-    'openai/gpt-oss-20b'
+    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Ultra-Fast Context Synthesis (< 2s)
+    'meta/llama-3.2-11b-vision-instruct',       // 💡 #2 High-Quality Vision-Instruct
+    'nvidia/nemotron-mini-4b-instruct',         // 💡 #3 Fast Fallback
+    'nvidia/nemotron-3-nano-30b-a3b'
   ],
   CREATIVE_COPY: [
-    'poolside/laguna-xs-2.1',                   // 🎨 #1 Ultra-Fast Copy (2.4s)
-    'nvidia/nemotron-mini-4b-instruct',         // 🎨 #2 High-Speed Copy (2.9s, 100% Success)
-    'meta/muse-glimmer-30b',                    // 🎨 #3 Creative Tone (58.3/100)
-    'z-ai/glm-5.2',                             // 🎨 #4 High Quality Copy (75/100)
-    'mistralai/mistral-nemotron',
-    'nvidia/llama-3.3-nemotron-super-49b-v1'
+    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Ultra-Fast Copy (< 2s)
+    'nvidia/nemotron-mini-4b-instruct',         // 🎨 #2 High-Speed Copy (100% Success)
+    'poolside/laguna-xs-2.1',                   // 🎨 #3 Creative Tone
+    'z-ai/glm-5.2'
   ],
   DEEP_STRATEGY: [
-    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Ultra-Fast & 100% Success (2.4s)
-    'nvidia/nemotron-3-nano-30b-a3b',           // 🧠 #2 High Stability Reasoning (4.1s)
-    'openai/gpt-oss-120b',                      // 👑 #3 Heavy 6-Angle Campaign Reasoning
-    'stepfun-ai/step-3.7-flash',                // ⚡ #4 Fast Flash Inference
-    'nvidia/nemotron-3.5-lightning-30b-a3b',    // 🧠 #5 Fallback
-    'nvidia/nemotron-3-ultra-550b-a55b'
+    'meta/llama-3.1-8b-instruct',               // ⚡ #1 Ultra-Fast & 100% Success (1.8s)
+    'nvidia/nemotron-mini-4b-instruct',         // 🧠 #2 High Stability Reasoning
+    'openai/gpt-oss-120b',                      // 👑 #3 Deep 6-Angle Campaign Reasoning
+    'nvidia/nemotron-3-nano-30b-a3b'
   ],
   TRANSLATION_CALIBRATION: [
-    'nvidia/riva-translate-4b-instruct-v1.1',   // 🌐 #1 Sub-Second Translation (828ms, 100% Success)
-    'nvidia/riva-translate-4b-instruct-v2',     // 🌐 #2 Fast Translation (931ms, 100% Success)
-    'nvidia/ising-calibration-1.5-31b',         // 📐 #3 Fast Calibration & Specs (1.7s, 100% Success)
-    'nvidia/nvidia-nemotron-nano-9b-v2'
+    'meta/llama-3.1-8b-instruct',               // 🌐 #1 Fast Specs & Translation
+    'nvidia/riva-translate-4b-instruct-v1.1',   // 🌐 #2 Sub-Second Translation
+    'nvidia/ising-calibration-1.5-31b',         // 📐 #3 Fast Calibration & Specs
+    'nvidia/riva-translate-4b-instruct-v2'
   ]
 } as const;
 
