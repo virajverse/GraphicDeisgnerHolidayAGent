@@ -201,7 +201,7 @@ app.post(['/api/admin/ban', '/admin/ban'], async (req: Request, res: Response) =
 });
 
 // Telegram Webhook Endpoint (For Vercel Serverless Production with Secret Token Auth)
-app.post(['/api/telegram/webhook', '/telegram/webhook'], async (req: Request, res: Response) => {
+app.post(['/api/telegram/webhook', '/telegram/webhook', '/api/webhook', '/webhook'], async (req: Request, res: Response) => {
   const secretHeader = req.headers['x-telegram-bot-api-secret-token'];
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
