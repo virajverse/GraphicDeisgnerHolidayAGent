@@ -1,5 +1,8 @@
 import type { Request, Response } from 'express';
 import { handleTelegramWebhookUpdate, initTelegramBot } from '../../src/services/telegramBot.js';
+import { initDatabase } from '../../src/db/database.js';
+
+let isDbHydrated = false;
 
 export default async function handler(req: Request, res: Response) {
   // Only accept POST requests from Telegram
@@ -9,6 +12,16 @@ export default async function handler(req: Request, res: Response) {
 
   // Ensure bot instance is initialized
   initTelegramBot();
+
+  // Ensure Turso Cloud database in-memory cache is hydrated on cold start
+  if (!isDbHydrated) {
+    try {
+      await initDatabase();
+      isDbHydrated = true;
+    } catch (e: any) {
+      console.warn(`[DB Hydration Notice]: ${e.message}`);
+    }
+  }
 
   const update = req.body;
   if (!update) {

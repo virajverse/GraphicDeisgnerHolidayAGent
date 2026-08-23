@@ -291,27 +291,41 @@ export function getUserKeyboard(chatId: string | number) {
 }
 
 function verifyUserAuth(msg: TelegramBot.Message): { authorized: boolean; user: UserRecord | null; isAdmin: boolean } {
-  const chatId = msg.chat.id.toString();
-  const username = msg.from ? msg.from.username : '';
+  const chatId = msg.chat.id.toString().trim();
+  const username = (msg.from?.username || '').toLowerCase().trim();
+  const adminId = getAdminChatId().trim();
 
-  // Master Admin Immutable Verification
-  if (chatId === getAdminChatId()) {
+  // Master Admin Immutable Verification (by Chat ID '1634951702' or username 'virajverse')
+  if (chatId === adminId || chatId === '1634951702' || username === 'virajverse') {
     let adminUser: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId);
     if (!adminUser) {
-      db.prepare(`
-        INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role)
-        VALUES (?, ?, ?, ?, 1, 'ADMIN')
-        ON CONFLICT(id) DO UPDATE SET is_approved=1, role='ADMIN'
-      `).run(`user_${chatId}`, msg.from?.first_name || 'Master Admin', username || 'virajverse', chatId);
-      adminUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId);
+      try {
+        db.prepare(`
+          INSERT INTO users (id, name, username, telegram_chat_id, is_approved, role, verification_status)
+          VALUES (?, ?, ?, ?, 1, 'ADMIN', 'APPROVED')
+          ON CONFLICT(id) DO UPDATE SET is_approved=1, role='ADMIN', verification_status='APPROVED'
+        `).run(`user_${chatId}`, msg.from?.first_name || 'Master Admin', msg.from?.username || 'virajverse', chatId);
+      } catch (e) { }
+      adminUser = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId) || {
+        id: `user_${chatId}`,
+        name: msg.from?.first_name || 'Master Admin',
+        username: msg.from?.username || 'virajverse',
+        telegram_chat_id: chatId,
+        is_approved: 1,
+        role: 'ADMIN',
+        verification_status: 'APPROVED'
+      } as any;
     }
     return { authorized: true, user: adminUser, isAdmin: true };
   }
 
   // Check database for approved regular user
-  const user: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ? AND is_approved = 1').get(chatId);
+  const user: UserRecord = db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(chatId);
   if (user) {
-    return { authorized: true, user, isAdmin: user.role === 'ADMIN' };
+    const isApproved = user.is_approved === 1 || user.verification_status === 'APPROVED' || user.role === 'ADMIN';
+    if (isApproved && user.is_banned !== 1) {
+      return { authorized: true, user, isAdmin: user.role === 'ADMIN' };
+    }
   }
 
   return { authorized: false, user: null, isAdmin: false };
