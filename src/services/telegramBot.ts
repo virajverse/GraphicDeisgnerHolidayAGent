@@ -280,6 +280,8 @@ export function getUpcomingInlineKeyboard() {
   return { inline_keyboard: buttons };
 }
 
+export { getAdminChatId, getAdminHandle } from '../db/database.js';
+
 export function isMasterAdmin(chatId: string | number): boolean {
   return chatId.toString() === getAdminChatId();
 }
@@ -404,12 +406,13 @@ export function formatTelegramAlertMessage(
 ): string {
   const { ideas, recommendation } = ideation;
 
-  let msg = `✨ *CREATIVE RADAR BRIEFING*\n\n`;
+  let msg = `🚨 *[LATEST GRAPHIC DESIGN RADAR // KISKA GRAPHIC BANANA HAI]*\n\n`;
   if (ideation.conversational_intro) {
     msg += `💬 _"${ideation.conversational_intro}"_\n\n`;
   }
 
-  msg += `📅 *Occasion:* ${event.name} (${event.date})\n\n`;
+  msg += `🎯 *Target Occasion:* **${event.name}** (${event.date})\n`;
+  msg += `📊 *Priority Score:* \`${event.importance || 85}/100\`\n\n`;
 
   msg += `🌐 *WHAT'S HAPPENING IN THE REAL WORLD:*\n`;
   msg += `_${context.summary}_\n\n`;

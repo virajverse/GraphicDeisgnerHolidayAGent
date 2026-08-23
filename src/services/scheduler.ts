@@ -3,14 +3,14 @@ import db from '../db/database.js';
 import { calculateEventScore } from './relevanceEngine.js';
 import { fetchRealWorldContext } from './contextEngine.js';
 import { generateCreativeIdeas } from './ideationEngine.js';
-import { formatTelegramAlertMessage } from './telegramBot.js';
+import { formatTelegramAlertMessage, getAdminChatId } from './telegramBot.js';
 import { EventRecord, UserRecord, ClientRecord } from '../types/database.js';
 
 /**
  * Ahead-of-Time Strategic Scheduler Engine (TypeScript)
  * Periodically checks for upcoming festivals/events (T-2 to T-3 Days in advance),
  * synthesizes real-world context, generates 6 creative concepts, and dispatches
- * automated morning briefings to all active designers at 8:00 AM IST.
+ * automated morning briefings to all active designers and admins at 8:00 AM IST.
  */
 
 export function initScheduler(telegramBot: any = null) {
@@ -32,11 +32,13 @@ export async function runEventCheckAndAlert(telegramBot: any = null, forcedEvent
   // Fetch ALL users who have ever interacted with the bot (Registered, Pending, Guest) except banned
   const targetUsers: UserRecord[] = db.prepare("SELECT * FROM users WHERE is_banned = 0 AND (verification_status IS NULL OR verification_status != 'BANNED')").all();
   
-  if (targetUsers.length === 0) {
-    targetUsers.push(db.prepare("SELECT * FROM users WHERE id = 'default_user'").get() || {
-      id: 'default_user',
-      name: 'Designer',
-      telegram_chat_id: '1634951702',
+  const adminChatId = getAdminChatId();
+  const hasAdmin = targetUsers.some(u => u.telegram_chat_id === adminChatId);
+  if (!hasAdmin && adminChatId) {
+    targetUsers.push({
+      id: `user_${adminChatId}`,
+      name: 'Super Admin',
+      telegram_chat_id: adminChatId,
       is_approved: 1,
       role: 'ADMIN'
     });
